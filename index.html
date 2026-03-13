@@ -411,14 +411,27 @@ function doGet() {
             </div>
           </div>
 
-          <!-- EXPORT -->
+          <!-- EXPORT / IMPORT JSON -->
           <div class="settings-section">
             <h3>📤 Exportar dados</h3>
-            <p>Baixe seus lançamentos para guardar ou abrir no Excel.</p>
+            <p>Baixe seus lançamentos para guardar, abrir no Excel ou transferir para outro dispositivo.</p>
             <div class="btn-row">
               <button class="btn btn-secondary" onclick="exportCSV()">📊 Exportar CSV (Excel)</button>
               <button class="btn btn-secondary" onclick="exportJSON()">💾 Backup JSON</button>
             </div>
+          </div>
+
+          <!-- IMPORT JSON -->
+          <div class="settings-section">
+            <h3>📲 Transferir dados entre dispositivos</h3>
+            <p>Exportou o backup JSON no computador? Envie o arquivo por WhatsApp ou Google Drive para o celular, depois importe aqui para sincronizar tudo.</p>
+            <div class="drop-zone" id="json-drop-zone" onclick="document.getElementById('json-file-input').click()"
+              ondragover="handleDragOver2(event)" ondragleave="handleDragLeave2()" ondrop="handleDrop2(event)">
+              <div class="drop-zone-icon">📲</div>
+              <div class="drop-zone-text">Clique ou arraste o arquivo JSON aqui</div>
+              <div class="drop-zone-sub">Arquivo financas-backup.json</div>
+            </div>
+            <input type="file" id="json-file-input" accept=".json" onchange="handleJSONSelect(event)" />
           </div>
 
           <!-- DANGER -->
@@ -909,6 +922,33 @@ function exportCSV(){
 }
 function exportJSON(){ dl('financas-backup.json',JSON.stringify(transactions,null,2),'application/json'); toast('💾 Backup exportado!'); }
 function dl(name,content,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); }
+function handleDragOver2(e){e.preventDefault();document.getElementById('json-drop-zone').classList.add('dragover');}
+function handleDragLeave2(){document.getElementById('json-drop-zone').classList.remove('dragover');}
+function handleDrop2(e){e.preventDefault();handleDragLeave2();const f=e.dataTransfer.files[0];if(f)readJSON(f);}
+function handleJSONSelect(e){const f=e.target.files[0];if(f)readJSON(f);}
+
+function readJSON(file) {
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) { toast('Arquivo JSON inválido.', 'error'); return; }
+      const before = transactions.length;
+      // Merge: add only transactions not already present (by id)
+      const existingIds = new Set(transactions.map(t => t.id));
+      const newOnes = imported.filter(t => !existingIds.has(t.id));
+      transactions.push(...newOnes);
+      localStorage.setItem('fin_transactions', JSON.stringify(transactions));
+      updateSidebar();
+      renderCalendar();
+      toast(`✅ ${newOnes.length} lançamentos importados! (${imported.length - newOnes.length} já existiam)`);
+    } catch(err) {
+      toast('Erro ao ler o arquivo JSON. Verifique se é o backup correto.', 'error');
+    }
+  };
+  r.readAsText(file, 'UTF-8');
+}
+
 function clearAll(){ if(!confirm('Apagar todos os lançamentos locais?')) return; transactions=[]; localStorage.removeItem('fin_transactions'); updateSidebar(); toast('🗑️ Dados locais apagados.'); }
 
 
