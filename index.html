@@ -440,18 +440,19 @@ document.getElementById("clear-btn").addEventListener("click",clearAll);
 ["modal-edit","modal-card","modal-goal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
 if(sheetsUrl)document.getElementById("sheets-url").value=sheetsUrl;
 document.getElementById("debug-btn").addEventListener("click",function(){
-  var out=document.getElementById("debug-out");
   var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
   var info="Mes atual: "+mm+"/"+yr+"\n";
-  info+="Total lancamentos: "+D.txs.length+"\n\n";
-  info+="Ultimos 5 lancamentos:\n";
-  D.txs.slice(-5).forEach(function(t,i){
-    var p=(t.date||"").split("/");
-    var match=p.length>=3&&p[1]===mm&&String(parseInt(p[2]))===yr;
-    info+=(i+1)+". "+t.description+" | "+t.date+" | fixo:"+t.isFixed+" | match:"+match+"\n";
-  });
-  out.textContent=info;
-  out.style.display=out.style.display==="none"?"block":"none";
+  info+="Total lancamentos salvos: "+D.txs.length+"\n\n";
+  if(D.txs.length===0){info+="NENHUM LANCAMENTO SALVO!\nChave localStorage: fin5";}
+  else{
+    info+="Todos os lancamentos:\n";
+    D.txs.forEach(function(t,i){
+      var p=(t.date||"").split("/");
+      var match=p.length>=3&&p[1]===mm&&String(parseInt(p[2]))===yr;
+      info+=(i+1)+". "+t.description+" | "+t.date+" | fixo:"+t.isFixed+" | aparece:"+match+"\n";
+    });
+  }
+  alert(info);
 });
 updateSyncUI();
 addMonth(0);
