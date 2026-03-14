@@ -464,7 +464,8 @@ function toggleVoice(){
     isListening=false;
     document.getElementById("vbtn").classList.remove("on");
     document.getElementById("chat-inp").focus();
-    toast("Pronto! Edite e aperte Enter","ok");
+    toast("Pronto! Edite se quiser e aperte Enter","ok");
+    // NUNCA envia automaticamente - usuario decide
   };
   recog.onerror=function(e){
     isListening=false;
