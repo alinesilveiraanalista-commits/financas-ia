@@ -261,6 +261,24 @@ textarea::placeholder{color:var(--dim);}
 <div class="pg" id="pg-set">
   <div class="tbar"><div><div class="ttl">⚙️ Config</div><div class="tsub"><span class="sdot" id="sdot"></span><span id="slbl">Sem sync</span></div></div></div>
   <div style="flex:1;overflow-y:auto;"><div class="swrap">
+    <div class="scard" style="border-color:rgba(0,229,160,0.4);">
+      <h3>📲 Sincronizar agora</h3>
+      <p>Gere um link com todos os seus dados e abra no outro dispositivo. Simples e sem configuração.</p>
+      <div class="brow2" style="margin-bottom:10px;">
+        <button class="btn btng" id="gen-link-btn" style="width:100%;justify-content:center;">🔗 Gerar link de sincronização</button>
+      </div>
+      <div id="sync-link-box" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:12px;margin-top:8px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Copie este link e abra no outro dispositivo:</div>
+        <div id="sync-link-text" style="font-size:10px;color:var(--green);word-break:break-all;margin-bottom:10px;"></div>
+        <button class="btn btns" id="copy-link-btn" style="width:100%;justify-content:center;">📋 Copiar link</button>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Ou importe um link recebido:</div>
+        <input class="inp" id="import-link-inp" placeholder="Cole o link aqui..." style="margin-bottom:8px;"/>
+        <button class="btn btns" id="import-link-btn" style="width:100%;justify-content:center;">📥 Importar do link</button>
+      </div>
+    </div>
+
     <div class="scard">
       <h3>Google Sheets <span class="tag tg">Gratis</span></h3>
       <p>Sincroniza todos os dados entre celular e computador.</p>
@@ -562,6 +580,71 @@ document.getElementById("json-drop").addEventListener("click",function(){documen
 document.getElementById("json-file").addEventListener("change",function(e){if(e.target.files[0])importJSON(e.target.files[0]);});
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 ["modal-edit","modal-card","modal-goal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
+// Link sync functions
+document.getElementById("gen-link-btn").addEventListener("click", function(){
+  var json = JSON.stringify(D);
+  var encoded = btoa(unescape(encodeURIComponent(json)));
+  // Split into chunks if too long - use a short URL approach
+  var baseUrl = window.location.href.split('?')[0].split('#')[0];
+  var link = baseUrl + '#sync=' + encoded;
+  if(link.length > 50000) {
+    // Too long - just export JSON
+    toast('Dados muito grandes para link. Use Exportar backup abaixo.','err');
+    return;
+  }
+  document.getElementById("sync-link-text").textContent = link;
+  document.getElementById("sync-link-box").style.display = "block";
+  toast('Link gerado!','ok');
+});
+
+document.getElementById("copy-link-btn").addEventListener("click", function(){
+  var link = document.getElementById("sync-link-text").textContent;
+  if(navigator.share) {
+    navigator.share({title:'Dados finança.ia', url:link});
+  } else {
+    navigator.clipboard.writeText(link).then(function(){ toast('Link copiado!','ok'); });
+  }
+});
+
+document.getElementById("import-link-btn").addEventListener("click", function(){
+  var inp = document.getElementById("import-link-inp").value.trim();
+  var match = inp.match(/#sync=(.+)/);
+  if(!match){ toast('Link invalido.','err'); return; }
+  try {
+    var decoded = JSON.parse(decodeURIComponent(escape(atob(match[1]))));
+    if(decoded.txs) {
+      var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
+      var newOnes = decoded.txs.filter(function(t){ return !existingIds[t.id]; });
+      D.txs = D.txs.concat(newOnes);
+      if(decoded.cards) decoded.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
+      if(decoded.goals) decoded.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
+      save(); renderHome(); toast(newOnes.length + ' lancamentos importados!','ok');
+    }
+  } catch(e){ toast('Erro ao importar link.','err'); }
+});
+
+// Check for sync data in URL on load
+(function checkUrlSync(){
+  var hash = window.location.hash;
+  var match = hash.match(/#sync=(.+)/);
+  if(!match) return;
+  try {
+    var decoded = JSON.parse(decodeURIComponent(escape(atob(match[1]))));
+    if(decoded.txs && decoded.txs.length > 0) {
+      var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
+      var newOnes = decoded.txs.filter(function(t){ return !existingIds[t.id]; });
+      if(newOnes.length > 0) {
+        D.txs = D.txs.concat(newOnes);
+        if(decoded.cards) decoded.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
+        if(decoded.goals) decoded.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
+        save();
+        window.location.hash = '';
+        toast(newOnes.length + ' lancamentos sincronizados!','ok');
+      }
+    }
+  } catch(e){}
+})();
+
 if(sheetsUrl)document.getElementById("sheets-url").value=sheetsUrl;
 document.getElementById("debug-btn").addEventListener("click",function(){
   var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
