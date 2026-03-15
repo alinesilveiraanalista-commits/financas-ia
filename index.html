@@ -584,21 +584,21 @@ document.getElementById("clear-btn").addEventListener("click",clearAll);
 ["modal-edit","modal-card","modal-goal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
 // File sync buttons
 document.getElementById("export-sync-btn").addEventListener("click", function(){
-  var json = JSON.stringify(D, null, 2);
-  var blob = new Blob([json], {type:'application/json'});
-  var url = URL.createObjectURL(blob);
-  // Try native share on mobile
-  if(navigator.share && navigator.canShare) {
-    var file = new File([blob], 'financas-sync.json', {type:'application/json'});
-    if(navigator.canShare({files:[file]})) {
-      navigator.share({files:[file], title:'Backup financa.ia'});
-      return;
-    }
+  try {
+    var json = JSON.stringify(D, null, 2);
+    var blob = new Blob([json], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'financas-sync.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    toast('Backup baixado! Envie pelo WhatsApp para voce mesmo.','ok');
+  } catch(e) {
+    toast('Erro ao exportar: ' + e.message, 'err');
   }
-  // Fallback: download
-  var a = document.createElement('a');
-  a.href = url; a.download = 'financas-sync.json'; a.click();
-  toast('Backup exportado! Envie pelo WhatsApp para voce mesmo.','ok');
 });
 
 document.getElementById("import-sync-drop").addEventListener("click", function(){
