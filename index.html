@@ -278,7 +278,7 @@ textarea::placeholder{color:var(--dim);}
         <div style="font-size:12px;color:var(--muted);">Importar backup</div>
         <div style="font-size:10px;color:var(--dim);margin-top:2px;">Toque para selecionar o arquivo</div>
       </div>
-      <input type="file" id="import-sync-file" accept=".json" style="display:none">
+      <input type="file" id="import-sync-file" accept=".json,.txt" style="display:none">
     </div>
 
     <div class="scard">
@@ -334,7 +334,7 @@ function doGet() {
         <div style="font-size:12px;color:var(--muted);">Importar backup JSON</div>
         <div style="font-size:10px;color:var(--dim);margin-top:2px;">Toque para selecionar</div>
       </div>
-      <input type="file" id="json-file" accept=".json" style="display:none">
+      <input type="file" id="json-file" accept=".json,.txt" style="display:none">
     </div>
     <div class="scard">
       <h3>Apagar dados</h3>
@@ -544,7 +544,7 @@ function syncSheets(){if(!sheetsUrl)return;document.getElementById("sdot").class
 function connectSheets(){var url=document.getElementById("sheets-url").value.trim();if(url.indexOf("script.google.com")<0){toast("URL invalida.","err");return;}sheetsUrl=url;localStorage.setItem("fin_sheets_url",url);syncSheets();toast("Conectado!","ok");updateSyncUI();}
 function disconnectSheets(){sheetsUrl="";localStorage.removeItem("fin_sheets_url");document.getElementById("sheets-url").value="";updateSyncUI();}
 function dl(name,content,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type:type}));a.download=name;a.click();}
-function exportJSON(){dl("financas-backup.json",JSON.stringify(D,null,2),"application/json");toast("Backup exportado!","ok");}
+function exportJSON(){dl("financas-backup.txt",JSON.stringify(D,null,2),"text/plain");toast("Backup exportado!","ok");}
 function exportCSV(){var h="Descricao,Valor,Tipo,Fixo,Parcela,Categoria,Data,Forma Pgto\n";var rows=D.txs.map(function(t){return '"'+t.description+'",'+t.amount+',"'+t.type+'","'+(t.isFixed?"Sim":"Nao")+'","'+(t.isInstallment?t.installmentCurrent+"/"+t.installmentOf:"")+'","'+t.category+'","'+t.date+'","'+(t.paymentMethod||"")+'"';}).join("\n");dl("financas.csv",h+rows,"text/csv");toast("CSV exportado!","ok");}
 function importJSON(file){var r=new FileReader();r.onload=function(e){try{var imp=JSON.parse(e.target.result);if(imp.txs){var existing={};D.txs.forEach(function(t){existing[t.id]=true;});var newOnes=imp.txs.filter(function(t){return !existing[t.id];});D.txs=D.txs.concat(newOnes);if(imp.cards)imp.cards.forEach(function(c){if(!D.cards.find(function(x){return x.id===c.id;}))D.cards.push(c);});if(imp.goals)imp.goals.forEach(function(g){if(!D.goals.find(function(x){return x.category===g.category;}))D.goals.push(g);});save();renderHome();toast(newOnes.length+" lancamentos importados!","ok");}else{toast("Arquivo invalido.","err");}}catch(err){toast("Erro ao ler.","err");}};r.readAsText(file,"UTF-8");}
 function clearAll(){if(!window.confirm("Apagar todos os dados?"))return;D={txs:[],cards:[],goals:[]};save();renderHome();toast("Apagado.","ok");}
@@ -586,11 +586,11 @@ document.getElementById("clear-btn").addEventListener("click",clearAll);
 document.getElementById("export-sync-btn").addEventListener("click", function(){
   try {
     var json = JSON.stringify(D, null, 2);
-    var blob = new Blob([json], {type:'application/json'});
+    var blob = new Blob([json], {type:'text/plain'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'financas-sync.json';
+    a.download = 'financas-sync.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
