@@ -262,21 +262,23 @@ textarea::placeholder{color:var(--dim);}
   <div class="tbar"><div><div class="ttl">⚙️ Config</div><div class="tsub"><span class="sdot" id="sdot"></span><span id="slbl">Sem sync</span></div></div></div>
   <div style="flex:1;overflow-y:auto;"><div class="swrap">
     <div class="scard" style="border-color:rgba(0,229,160,0.4);">
-      <h3>📲 Sincronizar agora</h3>
-      <p>Gere um link com todos os seus dados e abra no outro dispositivo. Simples e sem configuração.</p>
+      <h3>📲 Sincronizar entre dispositivos</h3>
+      <p>Exporte os dados, envie o arquivo pelo <strong style="color:var(--text)">WhatsApp ou Google Drive</strong> para você mesmo e importe no outro aparelho.</p>
+      <div style="background:var(--s2);border-radius:var(--rs);padding:12px;margin-bottom:12px;font-size:11px;color:var(--muted);line-height:1.7;">
+        <strong style="color:var(--text);">Celular → Computador:</strong><br>
+        1. No celular: toque em <strong style="color:var(--green)">Exportar backup</strong><br>
+        2. Envie o arquivo pelo WhatsApp para você mesmo<br>
+        3. No computador: baixe o arquivo e toque em <strong style="color:var(--green)">Importar backup</strong>
+      </div>
       <div class="brow2" style="margin-bottom:10px;">
-        <button class="btn btng" id="gen-link-btn" style="width:100%;justify-content:center;">🔗 Gerar link de sincronização</button>
+        <button class="btn btng" id="export-sync-btn" style="flex:1;justify-content:center;">📤 Exportar backup</button>
       </div>
-      <div id="sync-link-box" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:12px;margin-top:8px;">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Copie este link e abra no outro dispositivo:</div>
-        <div id="sync-link-text" style="font-size:10px;color:var(--green);word-break:break-all;margin-bottom:10px;"></div>
-        <button class="btn btns" id="copy-link-btn" style="width:100%;justify-content:center;">📋 Copiar link</button>
+      <div class="drop" id="import-sync-drop" style="margin-bottom:0;">
+        <div style="font-size:20px;margin-bottom:4px;">📥</div>
+        <div style="font-size:12px;color:var(--muted);">Importar backup</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px;">Toque para selecionar o arquivo</div>
       </div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Ou importe um link recebido:</div>
-        <input class="inp" id="import-link-inp" placeholder="Cole o link aqui..." style="margin-bottom:8px;"/>
-        <button class="btn btns" id="import-link-btn" style="width:100%;justify-content:center;">📥 Importar do link</button>
-      </div>
+      <input type="file" id="import-sync-file" accept=".json" style="display:none">
     </div>
 
     <div class="scard">
@@ -580,70 +582,46 @@ document.getElementById("json-drop").addEventListener("click",function(){documen
 document.getElementById("json-file").addEventListener("change",function(e){if(e.target.files[0])importJSON(e.target.files[0]);});
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 ["modal-edit","modal-card","modal-goal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
-// Link sync functions
-document.getElementById("gen-link-btn").addEventListener("click", function(){
-  var json = JSON.stringify(D);
-  var encoded = btoa(unescape(encodeURIComponent(json)));
-  // Split into chunks if too long - use a short URL approach
-  var baseUrl = window.location.href.split('?')[0].split('#')[0];
-  var link = baseUrl + '#sync=' + encoded;
-  if(link.length > 50000) {
-    // Too long - just export JSON
-    toast('Dados muito grandes para link. Use Exportar backup abaixo.','err');
-    return;
+// File sync buttons
+document.getElementById("export-sync-btn").addEventListener("click", function(){
+  var json = JSON.stringify(D, null, 2);
+  var blob = new Blob([json], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  // Try native share on mobile
+  if(navigator.share && navigator.canShare) {
+    var file = new File([blob], 'financas-sync.json', {type:'application/json'});
+    if(navigator.canShare({files:[file]})) {
+      navigator.share({files:[file], title:'Backup financa.ia'});
+      return;
+    }
   }
-  document.getElementById("sync-link-text").textContent = link;
-  document.getElementById("sync-link-box").style.display = "block";
-  toast('Link gerado!','ok');
+  // Fallback: download
+  var a = document.createElement('a');
+  a.href = url; a.download = 'financas-sync.json'; a.click();
+  toast('Backup exportado! Envie pelo WhatsApp para voce mesmo.','ok');
 });
 
-document.getElementById("copy-link-btn").addEventListener("click", function(){
-  var link = document.getElementById("sync-link-text").textContent;
-  if(navigator.share) {
-    navigator.share({title:'Dados finança.ia', url:link});
-  } else {
-    navigator.clipboard.writeText(link).then(function(){ toast('Link copiado!','ok'); });
-  }
+document.getElementById("import-sync-drop").addEventListener("click", function(){
+  document.getElementById("import-sync-file").click();
 });
-
-document.getElementById("import-link-btn").addEventListener("click", function(){
-  var inp = document.getElementById("import-link-inp").value.trim();
-  var match = inp.match(/#sync=(.+)/);
-  if(!match){ toast('Link invalido.','err'); return; }
-  try {
-    var decoded = JSON.parse(decodeURIComponent(escape(atob(match[1]))));
-    if(decoded.txs) {
+document.getElementById("import-sync-file").addEventListener("change", function(e){
+  var file = e.target.files[0]; if(!file) return;
+  var r = new FileReader();
+  r.onload = function(ev){
+    try {
+      var imp = JSON.parse(ev.target.result);
+      var txs = imp.txs || imp.transactions || (Array.isArray(imp)?imp:[]);
       var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
-      var newOnes = decoded.txs.filter(function(t){ return !existingIds[t.id]; });
+      var newOnes = txs.filter(function(t){ return !existingIds[t.id]; });
       D.txs = D.txs.concat(newOnes);
-      if(decoded.cards) decoded.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
-      if(decoded.goals) decoded.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
-      save(); renderHome(); toast(newOnes.length + ' lancamentos importados!','ok');
-    }
-  } catch(e){ toast('Erro ao importar link.','err'); }
+      if(imp.cards) imp.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
+      if(imp.goals) imp.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
+      save(); renderHome();
+      toast(newOnes.length + ' lancamentos importados!','ok');
+    } catch(e){ toast('Erro ao importar.','err'); }
+  };
+  r.readAsText(file,'UTF-8');
 });
-
-// Check for sync data in URL on load
-(function checkUrlSync(){
-  var hash = window.location.hash;
-  var match = hash.match(/#sync=(.+)/);
-  if(!match) return;
-  try {
-    var decoded = JSON.parse(decodeURIComponent(escape(atob(match[1]))));
-    if(decoded.txs && decoded.txs.length > 0) {
-      var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
-      var newOnes = decoded.txs.filter(function(t){ return !existingIds[t.id]; });
-      if(newOnes.length > 0) {
-        D.txs = D.txs.concat(newOnes);
-        if(decoded.cards) decoded.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
-        if(decoded.goals) decoded.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
-        save();
-        window.location.hash = '';
-        toast(newOnes.length + ' lancamentos sincronizados!','ok');
-      }
-    }
-  } catch(e){}
-})();
 
 if(sheetsUrl)document.getElementById("sheets-url").value=sheetsUrl;
 document.getElementById("debug-btn").addEventListener("click",function(){
