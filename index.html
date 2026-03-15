@@ -333,7 +333,8 @@ function doGet() {
   <button class="nb" data-page="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>💬 Registrar</button>
   <button class="nb" data-page="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>📋 Lançamentos</button>
   <button class="nb" data-page="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>📅 Calendário</button>
-  <button class="nb" data-page="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>💳 Cartões</button>
+  <button class="nb" data-page="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cartões</button>
+  <button class="nb" data-page="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>⚙️ Config</button>
 </nav>
 <div class="mbg" id="modal-edit"><div class="modal">
   <button class="mclose" id="close-edit">&#215;</button>
@@ -372,11 +373,40 @@ var CATS={Mercado:{icon:"🛒",color:"#4cc9f0",bg:"rgba(76,201,240,0.1)"},Restau
 var MONTHS=["Janeiro","Fevereiro","Marco","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 var CARD_ICONS={credit:"💳",debit:"🏦",pix:"📱",cash:"💵",boleto:"📄"};
 var CARD_NAMES={credit:"Credito",debit:"Debito Auto",pix:"PIX",cash:"Dinheiro",boleto:"Boleto"};
-var D=JSON.parse(localStorage.getItem("fin5")||'{"txs":[],"cards":[],"goals":[]}');
+// Load from any existing key - never lose data
+var D=(function(){
+  var keys=["fin5","fin4","fin_v3","fin_v2"];
+  var best={"txs":[],"cards":[],"goals":[]};
+  keys.forEach(function(k){
+    try{
+      var raw=localStorage.getItem(k);
+      if(!raw)return;
+      var parsed=JSON.parse(raw);
+      var txs=parsed.txs||parsed.transactions||[];
+      if(Array.isArray(parsed))txs=parsed;
+      if(txs.length>best.txs.length){
+        best.txs=txs.map(function(t){return{id:t.id,description:t.description||"",amount:t.amount||0,type:t.type||"expense",isFixed:!!t.isFixed,fixedDay:t.fixedDay||null,isInstallment:!!t.isInstallment,installmentOf:t.installmentOf||1,installmentCurrent:t.installmentCurrent||1,category:t.category||"Outros",date:t.date||"",paymentMethod:t.paymentMethod||""};});
+        if(parsed.cards)best.cards=parsed.cards;
+        if(parsed.goals)best.goals=parsed.goals;
+      }
+    }catch(e){}
+  });
+  // Also check fin_transactions (oldest key)
+  try{
+    var oldTxs=JSON.parse(localStorage.getItem("fin_transactions")||"[]");
+    if(Array.isArray(oldTxs)&&oldTxs.length>best.txs.length){
+      best.txs=oldTxs.map(function(t){return{id:t.id,description:t.description||"",amount:t.amount||0,type:t.type||"expense",isFixed:!!t.isFixed,fixedDay:t.fixedDay||null,isInstallment:false,installmentOf:1,installmentCurrent:1,category:t.category||"Outros",date:t.date||"",paymentMethod:t.paymentMethod||""};});
+    }
+  }catch(e){}
+  return best;
+})();
 var sheetsUrl=localStorage.getItem("fin_sheets_url")||"";
 var curM=new Date().getMonth(),curY=new Date().getFullYear();
 var txFilter="all",cardTab="cards",editIdx=-1,isListening=false,recog=null;
-function save(){localStorage.setItem("fin5",JSON.stringify(D));}
+function save(){
+  var json=JSON.stringify(D);
+  ["fin5","fin4","fin_v3"].forEach(function(k){localStorage.setItem(k,json);});
+}
 function fmt(v){return "R$"+Math.abs(v).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");}
 function toast(msg,type){var el=document.createElement("div");el.className="toast "+(type||"ok");el.textContent=msg;document.body.appendChild(el);setTimeout(function(){el.remove();},3000);}
 function monthTxs(){var mm=String(curM+1).padStart(2,"0"),yr=String(curY);return D.txs.filter(function(t){var p=(t.date||"").split("/");return p.length>=3&&p[1]===mm&&String(parseInt(p[2]))===yr;});}
@@ -439,41 +469,47 @@ function addTyping(){var msgs=document.getElementById("chat-msgs");var div=docum
 function removeTyping(id){var el=document.getElementById(id);if(el)el.remove();}
 function toggleVoice(){
   if(!window.SpeechRecognition&&!window.webkitSpeechRecognition){toast("Use Chrome para voz.","err");return;}
-  if(isListening){recog.stop();return;}
+  if(isListening){
+    recog.stop();
+    isListening=false;
+    document.getElementById("vbtn").classList.remove("on");
+    document.getElementById("chat-inp").focus();
+    toast("Pronto! Edite e aperte Enter","ok");
+    return;
+  }
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   recog=new SR();
   recog.lang="pt-BR";
-  recog.interimResults=true;
-  recog.continuous=true;
+  recog.interimResults=false;
+  recog.continuous=false;
   recog.onstart=function(){
     isListening=true;
     document.getElementById("vbtn").classList.add("on");
-    toast("Ouvindo... toque mic para parar","ok");
+    document.getElementById("chat-inp").value="";
+    toast("Ouvindo...","ok");
   };
   recog.onresult=function(e){
-    var final="",interim="";
+    var transcript="";
     for(var i=0;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
+      transcript+=e.results[i][0].transcript;
     }
-    var inp=document.getElementById("chat-inp");
-    inp.value=(final||interim).trim();
-    autoResize(inp);
+    document.getElementById("chat-inp").value=transcript.trim();
+    autoResize(document.getElementById("chat-inp"));
   };
   recog.onend=function(){
     isListening=false;
     document.getElementById("vbtn").classList.remove("on");
     document.getElementById("chat-inp").focus();
-    toast("Pronto! Edite se quiser e aperte Enter","ok");
-    // NUNCA envia automaticamente - usuario decide
+    toast("Pronto! Edite e aperte Enter","ok");
   };
   recog.onerror=function(e){
     isListening=false;
     document.getElementById("vbtn").classList.remove("on");
-    if(e.error!=="no-speech")toast("Erro no microfone: "+e.error,"err");
+    if(e.error!=="no-speech")toast("Erro: "+e.error,"err");
   };
   recog.start();
 }
+
 function renderTx(){var lbl=MONTHS[curM].slice(0,3)+" "+curY;["mlbl1","mlbl2"].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=lbl;});var m=monthTxs().slice().reverse();if(txFilter==="fixed")m=m.filter(function(t){return t.isFixed&&t.type==="expense";});if(txFilter==="installment")m=m.filter(function(t){return t.isInstallment&&t.type==="expense";});if(txFilter==="variable")m=m.filter(function(t){return !t.isFixed&&!t.isInstallment&&t.type==="expense";});if(txFilter==="income")m=m.filter(function(t){return t.type==="income";});var container=document.getElementById("tx-list");container.innerHTML="";if(!m.length){var w=document.createElement("div");w.className="wel";w.style.padding="24px 0";w.innerHTML="<div class='wel-icon'>📋</div><h2>Sem lancamentos</h2><p>Use Registrar para adicionar.</p>";container.appendChild(w);return;}m.forEach(function(tx){var realIdx=D.txs.indexOf(tx);var cat=CATS[tx.category]||CATS.Outros;var inc=tx.type==="income";var item=document.createElement("div");item.className="txitem";var icon=document.createElement("div");icon.className="txicon";icon.style.background=cat.bg;icon.textContent=cat.icon;var info=document.createElement("div");info.className="txinfo";var desc=document.createElement("div");desc.className="txdesc";desc.textContent=tx.description;var meta=document.createElement("div");meta.className="txmeta";var ds=document.createElement("span");ds.textContent=tx.date;meta.appendChild(ds);var cb=document.createElement("span");cb.className="bdg";cb.textContent=tx.category;meta.appendChild(cb);if(tx.isFixed){var fb=document.createElement("span");fb.className="bdg y";fb.textContent="Fixo";meta.appendChild(fb);}if(tx.isInstallment){var ib=document.createElement("span");ib.className="bdg p";ib.textContent=tx.installmentCurrent+"/"+tx.installmentOf;meta.appendChild(ib);}if(tx.paymentMethod){var pb=document.createElement("span");pb.className="bdg b";pb.textContent=tx.paymentMethod;meta.appendChild(pb);}info.appendChild(desc);info.appendChild(meta);(function(idx){info.addEventListener("click",function(){openEdit(idx);});})(realIdx);var right=document.createElement("div");right.style.cssText="display:flex;align-items:center;gap:6px;flex-shrink:0;";var amt=document.createElement("div");amt.className="txamt "+(inc?"cr":"db");amt.textContent=(inc?"+":"-")+fmt(tx.amount);var del=document.createElement("button");del.className="delbtn";del.textContent="X";(function(idx,t){del.addEventListener("click",function(e){e.stopPropagation();deleteTx(idx,t);});})(realIdx,tx);right.appendChild(amt);right.appendChild(del);item.appendChild(icon);item.appendChild(info);item.appendChild(right);container.appendChild(item);});}
 function deleteTx(idx,tx){if(tx.isFixed){var choice=window.confirm("Despesa fixa detectada.\nOK = apagar TODOS os meses\nCancelar = apagar so este");if(choice){var desc=tx.description,amt=tx.amount;D.txs=D.txs.filter(function(t){return !(t.isFixed&&t.description===desc&&t.amount===amt);});save();renderTx();renderHome();toast("Fixas removidas.","ok");}else{D.txs.splice(idx,1);save();renderTx();renderHome();toast("Removido.","ok");}}else{if(window.confirm("Deletar este lancamento?")){D.txs.splice(idx,1);save();renderTx();renderHome();toast("Removido.","ok");}}}
 function openEdit(idx){var tx=D.txs[idx];if(!tx)return;editIdx=idx;document.getElementById("ed-desc").value=tx.description;document.getElementById("ed-amt").value=tx.amount;document.getElementById("ed-date").value=tx.date;document.getElementById("ed-cat").value=tx.category||"Outros";document.getElementById("ed-pay").value=tx.paymentMethod||"";var typeVal=tx.type==="income"?"income":tx.isFixed?"expense-fixed":"expense-variable";document.getElementById("ed-type").value=typeVal;document.getElementById("ed-fixday").style.display=tx.isFixed?"block":"none";document.getElementById("ed-fixday").value=tx.fixedDay||"";document.getElementById("modal-edit").classList.add("on");}
