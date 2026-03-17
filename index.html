@@ -362,7 +362,7 @@ function doGet() {
   <input class="inp" id="ed-desc" placeholder="Descricao" />
   <input class="inp" id="ed-amt" type="number" step="0.01" placeholder="Valor (R$)" />
   <input class="inp" id="ed-date" placeholder="Data (DD/MM/AAAA)" />
-  <select class="sel" id="ed-cat"><option>Mercado</option><option>Restaurante</option><option>Carro</option><option>Casa</option><option>Saude</option><option>Assinaturas</option><option>Lazer</option><option>Viagens</option><option>Educacao</option><option>Auto-cuidado</option><option>Pets</option><option>Investimentos</option><option>Ganho</option><option>Outros</option></select>
+  <select class="sel" id="ed-cat"></select>
   <select class="sel" id="ed-type">
     <option value="expense-variable">💸 Gasto Variável</option>
     <option value="expense-fixed">📌 Gasto Fixo</option>
@@ -384,19 +384,47 @@ function doGet() {
 <div class="mbg" id="modal-goal"><div class="modal">
   <button class="mclose" id="close-goal">&#215;</button>
   <h3>Definir meta de gasto</h3>
-  <select class="sel" id="goal-cat"><option>Mercado</option><option>Restaurante</option><option>Carro</option><option>Casa</option><option>Saude</option><option>Assinaturas</option><option>Lazer</option><option>Viagens</option><option>Educacao</option><option>Auto-cuidado</option><option>Pets</option><option>Outros</option></select>
+  <select class="sel" id="goal-cat"></select>
   <input class="inp" id="goal-lim" type="number" placeholder="Limite mensal (R$)" />
   <button class="btn btng" id="save-goal-btn" style="width:100%;justify-content:center;">Salvar meta</button>
 </div></div>
 <script>
-var CATS={Mercado:{icon:"🛒",color:"#4cc9f0",bg:"rgba(76,201,240,0.1)"},Restaurante:{icon:"🍽️",color:"#f72585",bg:"rgba(247,37,133,0.1)"},Carro:{icon:"🚗",color:"#ff9f1c",bg:"rgba(255,159,28,0.1)"},Casa:{icon:"🏠",color:"#a855f7",bg:"rgba(168,85,247,0.1)"},Saude:{icon:"💊",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},Assinaturas:{icon:"📱",color:"#4361ee",bg:"rgba(67,97,238,0.1)"},Lazer:{icon:"🎉",color:"#ffd166",bg:"rgba(255,209,102,0.1)"},Viagens:{icon:"✈️",color:"#06d6a0",bg:"rgba(6,214,160,0.1)"},Educacao:{icon:"📚",color:"#118ab2",bg:"rgba(17,138,178,0.1)"},"Auto-cuidado":{icon:"💆",color:"#ef476f",bg:"rgba(239,71,111,0.1)"},Pets:{icon:"🐾",color:"#ffd166",bg:"rgba(255,209,102,0.1)"},Investimentos:{icon:"📈",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},Ganho:{icon:"💰",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},Parcela:{icon:"💳",color:"#c084fc",bg:"rgba(192,132,252,0.1)"},Outros:{icon:"📦",color:"#6b6b85",bg:"rgba(107,107,133,0.1)"}};
+var DEFAULT_CATS={
+  "Ajudas e Presentes":{icon:"🎁",color:"#f72585",bg:"rgba(247,37,133,0.1)"},
+  "Assinaturas e Planos":{icon:"📺",color:"#4361ee",bg:"rgba(67,97,238,0.1)"},
+  "Auto-cuidado":{icon:"💆",color:"#ef476f",bg:"rgba(239,71,111,0.1)"},
+  "Carro":{icon:"🚗",color:"#ff9f1c",bg:"rgba(255,159,28,0.1)"},
+  "Casa":{icon:"🏠",color:"#a855f7",bg:"rgba(168,85,247,0.1)"},
+  "Empresa":{icon:"💼",color:"#ffd166",bg:"rgba(255,209,102,0.1)"},
+  "Estudos":{icon:"📚",color:"#118ab2",bg:"rgba(17,138,178,0.1)"},
+  "Feira":{icon:"🧺",color:"#06d6a0",bg:"rgba(6,214,160,0.1)"},
+  "Festas e Eventos":{icon:"🎉",color:"#ffd166",bg:"rgba(255,209,102,0.1)"},
+  "Ifood":{icon:"🍔",color:"#ea1d2c",bg:"rgba(234,29,44,0.1)"},
+  "Lazer":{icon:"🌟",color:"#ffd166",bg:"rgba(255,209,102,0.1)"},
+  "Mercado":{icon:"🛒",color:"#4cc9f0",bg:"rgba(76,201,240,0.1)"},
+  "Pet":{icon:"🐶",color:"#ff9f1c",bg:"rgba(255,159,28,0.1)"},
+  "Restaurante":{icon:"🍽️",color:"#f72585",bg:"rgba(247,37,133,0.1)"},
+  "Saude e Fitness":{icon:"💊",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},
+  "Shopping e Compras":{icon:"🛍️",color:"#c084fc",bg:"rgba(192,132,252,0.1)"},
+  "Uber e Transporte":{icon:"🚕",color:"#000000",bg:"rgba(100,100,100,0.1)"},
+  "Viagens":{icon:"✈️",color:"#06d6a0",bg:"rgba(6,214,160,0.1)"},
+  "Ganho":{icon:"💰",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},
+  "Parcela":{icon:"💳",color:"#c084fc",bg:"rgba(192,132,252,0.1)"},
+  "Investimentos":{icon:"📈",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},
+  "Outros":{icon:"📦",color:"#6b6b85",bg:"rgba(107,107,133,0.1)"}
+};
+// Load custom categories from storage and merge
+if(!D.customCats) D.customCats={};
+var CATS = Object.assign({}, DEFAULT_CATS, D.customCats);
+function refreshCats(){ if(!D.customCats) D.customCats={}; CATS = Object.assign({}, DEFAULT_CATS, D.customCats); }
 var MONTHS=["Janeiro","Fevereiro","Marco","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 var CARD_ICONS={credit:"💳",debit:"🏦",pix:"📱",cash:"💵",boleto:"📄"};
 var CARD_NAMES={credit:"Credito",debit:"Debito Auto",pix:"PIX",cash:"Dinheiro",boleto:"Boleto"};
 // Load from any existing key - never lose data
 var D=(function(){
   var keys=["fin5","fin4","fin_v3","fin_v2"];
-  var best={"txs":[],"cards":[],"goals":[]};
+  var best={"txs":[],"cards":[],"goals":[],"customCats":{}};
+// ensure customCats always exists after merge
   keys.forEach(function(k){
     try{
       var raw=localStorage.getItem(k);
@@ -436,51 +464,6 @@ function renderHome(){document.getElementById("home-sub").textContent=MONTHS[cur
 function renderCatSection(items,total,isInc,gridId,totId,goals){document.getElementById(totId).textContent=fmt(total);var grid=document.getElementById(gridId);if(!items.length){grid.innerHTML='<div style="font-size:11px;color:var(--dim);padding:6px">Nenhum lancamento</div>';return;}var cats={};items.forEach(function(t){if(!cats[t.category])cats[t.category]={total:0,count:0};cats[t.category].total+=t.amount;cats[t.category].count++;});grid.innerHTML="";Object.keys(cats).sort(function(a,b){return cats[b].total-cats[a].total;}).forEach(function(cat){var d=cats[cat],c=CATS[cat]||CATS.Outros;var card=document.createElement("div");card.className="ccard";var ie=document.createElement("div");ie.className="ccard-icon";ie.textContent=c.icon;var ne=document.createElement("div");ne.className="ccard-name";ne.textContent=cat;var ae=document.createElement("div");ae.className="ccard-amt"+(isInc?" inc":"");ae.textContent=(isInc?"+":"-")+fmt(d.total);var ce=document.createElement("div");ce.className="ccard-cnt";ce.textContent=d.count+" lancamento"+(d.count!==1?"s":"");card.appendChild(ie);card.appendChild(ne);card.appendChild(ae);card.appendChild(ce);var goal=goals[cat];if(goal){var pct=Math.min(d.total/goal*100,100),over=d.total>goal;var tr=document.createElement("div");tr.className="gbar-track";var fi=document.createElement("div");fi.className="gbar-fill";fi.style.width=pct.toFixed(0)+"%";fi.style.background=over?"var(--red)":c.color;tr.appendChild(fi);var lb=document.createElement("div");lb.className="gbar-lbl";lb.textContent=pct.toFixed(0)+"% de "+fmt(goal)+(over?" acima":"");card.appendChild(tr);card.appendChild(lb);}grid.appendChild(card);});}
 function autoResize(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,96)+"px";}
 function sendChat(){var inp=document.getElementById("chat-inp"),text=inp.value.trim();if(!text)return;addMsg(text,"u");inp.value="";inp.style.height="auto";var tid=addTyping();callAI(text).then(function(r){removeTyping(tid);processResult(r);}).catch(function(){removeTyping(tid);addMsg("Erro ao processar. Verifique sua conexao.","a");});}
-function parseLocal(text){
-  var today=new Date();
-  var todayStr=String(today.getDate()).padStart(2,"0")+"/"+String(today.getMonth()+1).padStart(2,"0")+"/"+today.getFullYear();
-  var t=text.toLowerCase();
-  // Detect type
-  var isIncome=/receb|salari|ganh|pagaram|entrada|freela|renda/i.test(text);
-  // Detect fixed
-  var isFixed=/fixo|todo dia|todo mes|recorrente|mensalidade/i.test(text);
-  var fixedDayMatch=text.match(/dia\s+(\d{1,2})/i);
-  var fixedDay=fixedDayMatch?parseInt(fixedDayMatch[1]):null;
-  // Detect installments
-  var instMatch=text.match(/(\d+)\s*x|em\s+(\d+)\s*(vezes|parcelas)/i);
-  var installmentOf=instMatch?parseInt(instMatch[1]||instMatch[2]):1;
-  var isInstallment=installmentOf>1;
-  // Extract amount - look for R$ or number patterns
-  var amtMatch=text.match(/R\$\s*([\d.,]+)|(?:^|\s)([\d]+(?:[.,]\d+)?)\s*(?:reais|pila|conto)?/i);
-  var amount=0;
-  if(amtMatch){var raw=(amtMatch[1]||amtMatch[2]||"").replace(/\./g,"").replace(",",".");amount=parseFloat(raw)||0;}
-  if(isInstallment&&installmentOf>1)amount=amount/installmentOf;
-  // Extract date
-  var dateMatch=text.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
-  var date=todayStr;
-  if(dateMatch){var d=dateMatch[1].padStart(2,"0"),m=dateMatch[2].padStart(2,"0"),y=dateMatch[3]?(""+dateMatch[3]).length===2?"20"+dateMatch[3]:dateMatch[3]:""+today.getFullYear();date=d+"/"+m+"/"+y;}
-  // Categorize
-  var category="Outros";
-  if(isIncome)category="Ganho";
-  else if(/mercado|supermerc|hortifruti|feira|padaria|acougue|pao|leite|queijo|verdura|frutas|compras/i.test(t))category="Mercado";
-  else if(/restaurante|lanche|pizza|hamburguer|sushi|churrasco|comida|almoco|jantar|cafe|fondue|hidromel|chopp|bar/i.test(t))category="Restaurante";
-  else if(/gasolina|combustivel|alcool|posto|estacionamento|pedagio|uber|99|ifood entrega|nutag|carro|seguro auto|ipva|manutencao carro/i.test(t))category="Carro";
-  else if(/aluguel|condominio|luz|agua|gas|internet|conta|financiamento|ape|casa|manutencao|limpeza|faxina/i.test(t))category="Casa";
-  else if(/medico|hospital|farmacia|remedio|consulta|exame|plano de saude|convenio|terapia|psico|dentista|laboratorio/i.test(t))category="Saude";
-  else if(/netflix|spotify|amazon|disney|youtube|globo|assinatura|mensalidade|plano celular|tim|claro|vivo|oi|internet|streaming/i.test(t))category="Assinaturas";
-  else if(/academia|gym|totalpass|smartfit|crossfit|esporte|clube/i.test(t))category="Saude";
-  else if(/viagem|hotel|passagem|aeroporto|hospedagem|airbnb|turismo/i.test(t))category="Viagens";
-  else if(/escola|curso|faculdade|livro|material|educacao|estudo/i.test(t))category="Educacao";
-  else if(/salao|cabelo|manicure|pedicure|depilacao|estetica|spa|beleza|maquiagem|cuidado/i.test(t))category="Auto-cuidado";
-  else if(/pet|veterinario|racao|cobasi|banho tosa|animal|cachorro|gato|salem/i.test(t))category="Pets";
-  else if(/investimento|poupanca|cdb|fundo|acoes|tesouro/i.test(t))category="Investimentos";
-  else if(/presente|gift|festa|evento|show|cinema|teatro|lazer|passeio|livelo/i.test(t))category="Lazer";
-  // Description - clean up the text
-  var desc=text.replace(/R\$\s*[\d.,]+/g,"").replace(/\d+\s*x/gi,"").replace(/em\s+\d+\s*(vezes|parcelas)/gi,"").replace(/fixo\s*(todo\s*dia\s*\d+)?/gi,"").replace(/hoje|ontem|amanha/gi,"").trim();
-  desc=desc.charAt(0).toUpperCase()+desc.slice(1);
-  if(!desc||desc.length<2)desc=text.trim();
-  return Promise.resolve({transactions:[{description:desc,amount:amount,type:isIncome?"income":"expense",isFixed:isFixed,fixedDay:fixedDay,isInstallment:isInstallment,installmentOf:installmentOf,installmentCurrent:1,category:category,date:date,paymentMethod:""}],summary:isIncome?"Ganho registrado: "+desc+" "+fmt(amount):"Gasto registrado: "+desc+" "+fmt(amount)+(isFixed?" (fixo)":"")+(isInstallment?" em "+installmentOf+"x":"")});
-}
 function callAI(text){return parseLocal(text);}
 function processResult(result){var txs=result.transactions||[];txs.forEach(function(tx){if(tx.isInstallment&&tx.installmentOf>1){var base=parseDateBR(tx.date);for(var i=0;i<tx.installmentOf;i++){var dd=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());D.txs.push({id:Date.now()+Math.random(),description:tx.description+" ("+(i+1)+"/"+tx.installmentOf+")",amount:tx.amount,type:"expense",isFixed:false,isInstallment:true,installmentOf:tx.installmentOf,installmentCurrent:i+1,category:tx.category||"Outros",date:String(dd.getDate()).padStart(2,"0")+"/"+String(dd.getMonth()+1).padStart(2,"0")+"/"+dd.getFullYear(),paymentMethod:tx.paymentMethod||"",fixedDay:null});}}else{D.txs.push({id:Date.now()+Math.random(),description:tx.description,amount:tx.amount,type:tx.type||"expense",isFixed:!!tx.isFixed,fixedDay:tx.fixedDay||null,isInstallment:false,installmentOf:1,installmentCurrent:1,category:tx.category||"Outros",date:tx.date,paymentMethod:tx.paymentMethod||""});}});save();var msgs=document.getElementById("chat-msgs");var w=msgs.querySelector(".wel");if(w)w.remove();var div=document.createElement("div");div.className="msg a";var lbl=document.createElement("div");lbl.className="ailbl";lbl.textContent="financa.ia";var sum=document.createElement("div");sum.textContent=result.summary;sum.style.marginBottom="7px";div.appendChild(lbl);div.appendChild(sum);var pw=document.createElement("div");pw.style.cssText="display:flex;flex-wrap:wrap;gap:3px;";txs.forEach(function(tx){var c=CATS[tx.category]||CATS.Outros,inc=tx.type==="income";var p=document.createElement("span");p.className="pill "+(inc?"cr":"db");p.textContent=c.icon+" "+tx.description+" "+(inc?"+":"-")+fmt(tx.amount)+(tx.isFixed?" [F]":"")+(tx.isInstallment?" "+tx.installmentOf+"x":"");pw.appendChild(p);});div.appendChild(pw);msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;if(sheetsUrl)syncSheets();}
 function parseDateBR(str){var p=(str||"").split("/");if(p.length===3)return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return new Date();}
@@ -623,6 +606,111 @@ document.getElementById("import-sync-file").addEventListener("change", function(
   r.readAsText(file,'UTF-8');
 });
 
+// Populate category selects dynamically
+function populateCatSelects(){
+  var cats = Object.keys(CATS).filter(function(c){ return c!=="Ganho"&&c!=="Parcela"; });
+  var allCats = Object.keys(CATS);
+  ["ed-cat","goal-cat"].forEach(function(id){
+    var sel = document.getElementById(id);
+    if(!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = (id==="ed-cat"?allCats:cats).map(function(c){ return '<option>'+c+'</option>'; }).join('');
+    if(cur) sel.value = cur;
+  });
+}
+
+function renderCustomCats(){
+  var list = document.getElementById("custom-cats-list");
+  if(!list) return;
+  var custom = D.customCats||{};
+  var customKeys = Object.keys(custom);
+  list.innerHTML = '';
+  if(!customKeys.length){
+    var empty = document.createElement('div');
+    empty.style.cssText = 'font-size:11px;color:var(--dim)';
+    empty.textContent = 'Nenhuma categoria personalizada.';
+    list.appendChild(empty);
+    return;
+  }
+  customKeys.forEach(function(name){
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;';
+    var ico = document.createElement('span');
+    ico.textContent = custom[name].icon;
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font-size:12px;flex:1;';
+    lbl.textContent = name;
+    var btn = document.createElement('button');
+    btn.style.cssText = 'background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;';
+    btn.textContent = 'X';
+    (function(n){ btn.addEventListener('click', function(){ removeCustomCat(n); }); })(name);
+    wrap.appendChild(ico); wrap.appendChild(lbl); wrap.appendChild(btn);
+    list.appendChild(wrap);
+  });
+}
+
+function removeCustomCat(name){
+  delete D.customCats[name];
+  refreshCats(); save(); renderCustomCats(); populateCatSelects();
+  toast('Categoria removida.','ok');
+}
+
+document.getElementById("add-cat-btn").addEventListener("click", function(){
+  var icon = document.getElementById("new-cat-icon").value.trim()||"📌";
+  var name = document.getElementById("new-cat-name").value.trim();
+  if(!name){ toast('Digite o nome da categoria.','err'); return; }
+  if(!D.customCats) D.customCats={};
+  D.customCats[name] = {icon:icon, color:"#6b6b85", bg:"rgba(107,107,133,0.1)"};
+  refreshCats(); save(); renderCustomCats(); populateCatSelects();
+  document.getElementById("new-cat-icon").value='';
+  document.getElementById("new-cat-name").value='';
+  toast('Categoria "'+name+'" adicionada!','ok');
+});
+
+// Update local categorization to use new category names
+function parseLocal(text){
+  var today=new Date();
+  var todayStr=String(today.getDate()).padStart(2,"0")+"/"+String(today.getMonth()+1).padStart(2,"0")+"/"+today.getFullYear();
+  var isIncome=/receb|salari|ganh|pagaram|entrada|freela|renda/i.test(text);
+  var isFixed=/fixo|todo dia|todo mes|recorrente|mensalidade/i.test(text);
+  var fixedDayMatch=text.match(/dia\s+(\d{1,2})/i);
+  var fixedDay=fixedDayMatch?parseInt(fixedDayMatch[1]):null;
+  var instMatch=text.match(/(\d+)\s*x|em\s+(\d+)\s*(vezes|parcelas)/i);
+  var installmentOf=instMatch?parseInt(instMatch[1]||instMatch[2]):1;
+  var isInstallment=installmentOf>1;
+  var amtMatch=text.match(/R\$\s*([\d.,]+)|(?:^|\s)(\d+(?:[.,]\d+)?)\s*(?:reais)?/i);
+  var amount=0;
+  if(amtMatch){var raw=(amtMatch[1]||amtMatch[2]||"").replace(/\./g,"").replace(",",".");amount=parseFloat(raw)||0;}
+  if(isInstallment&&installmentOf>1)amount=amount/installmentOf;
+  var dateMatch=text.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  var date=todayStr;
+  if(dateMatch){var d=dateMatch[1].padStart(2,"0"),m=dateMatch[2].padStart(2,"0"),y=dateMatch[3]?(""+dateMatch[3]).length===2?"20"+dateMatch[3]:dateMatch[3]:""+today.getFullYear();date=d+"/"+m+"/"+y;}
+  var t=text.toLowerCase();
+  var category="Outros";
+  if(isIncome)category="Ganho";
+  else if(/mercado|supermerc|hortifruti|padaria|acougue|pao|leite|queijo|verdura|frutas/i.test(t))category="Mercado";
+  else if(/feira/i.test(t))category="Feira";
+  else if(/ifood|rappi|delivery/i.test(t))category="Ifood";
+  else if(/restaurante|lanche|pizza|hamburguer|sushi|churrasco|almoco|jantar|fondue|hidromel|chopp|bar/i.test(t))category="Restaurante";
+  else if(/uber|99|taxi|onibus|metro|transporte|pedagio|estacionamento|nutag/i.test(t))category="Uber e Transporte";
+  else if(/gasolina|combustivel|alcool|posto|ipva|seguro auto|manutencao carro/i.test(t))category="Carro";
+  else if(/aluguel|condominio|luz|agua|gas|financiamento|ape|casa|manutencao|limpeza|faxina/i.test(t))category="Casa";
+  else if(/medico|hospital|farmacia|remedio|consulta|exame|plano de saude|convenio|dentista|laboratorio|academia|gym|totalpass|fitness/i.test(t))category="Saude e Fitness";
+  else if(/netflix|spotify|amazon|disney|youtube|streaming|internet|plano celular|tim|claro|vivo/i.test(t))category="Assinaturas e Planos";
+  else if(/viagem|hotel|passagem|aeroporto|hospedagem|airbnb/i.test(t))category="Viagens";
+  else if(/escola|curso|faculdade|livro|material|educacao|estudo/i.test(t))category="Estudos";
+  else if(/salao|cabelo|manicure|pedicure|depilacao|estetica|spa|beleza|maquiagem|cuidado|terapia/i.test(t))category="Auto-cuidado";
+  else if(/pet|veterinario|racao|cobasi|banho tosa|animal|cachorro|gato/i.test(t))category="Pet";
+  else if(/investimento|poupanca|cdb|fundo|acoes|tesouro/i.test(t))category="Investimentos";
+  else if(/presente|gift|aniversario|festa|evento|show|cinema|teatro|casamento/i.test(t))category="Festas e Eventos";
+  else if(/shopping|roupa|calçado|eletronico|compra/i.test(t))category="Shopping e Compras";
+  else if(/ajuda|doacão|presente|mimo/i.test(t))category="Ajudas e Presentes";
+  var desc=text.replace(/R\$\s*[\d.,]+/g,"").replace(/\d+\s*x/gi,"").replace(/em\s+\d+\s*(vezes|parcelas)/gi,"").replace(/fixo\s*(todo\s*dia\s*\d+)?/gi,"").replace(/hoje|ontem|amanha/gi,"").trim();
+  if(!desc||desc.length<2)desc=text.trim();
+  desc=desc.charAt(0).toUpperCase()+desc.slice(1);
+  return Promise.resolve({transactions:[{description:desc,amount:amount,type:isIncome?"income":"expense",isFixed:isFixed,fixedDay:fixedDay,isInstallment:isInstallment,installmentOf:installmentOf,installmentCurrent:1,category:category,date:date,paymentMethod:""}],summary:(isIncome?"Ganho":"Gasto")+" registrado: "+desc+" "+fmt(amount)+(isFixed?" (fixo)":"")+(isInstallment?" em "+installmentOf+"x":"")});
+}
+
 if(sheetsUrl)document.getElementById("sheets-url").value=sheetsUrl;
 document.getElementById("debug-btn").addEventListener("click",function(){
   var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
@@ -640,6 +728,8 @@ document.getElementById("debug-btn").addEventListener("click",function(){
   alert(info);
 });
 updateSyncUI();
+populateCatSelects();
+renderCustomCats();
 addMonth(0);
 renderHome();
 </script>
