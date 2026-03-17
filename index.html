@@ -413,10 +413,7 @@ var DEFAULT_CATS={
   "Investimentos":{icon:"📈",color:"#00e5a0",bg:"rgba(0,229,160,0.1)"},
   "Outros":{icon:"📦",color:"#6b6b85",bg:"rgba(107,107,133,0.1)"}
 };
-// Load custom categories from storage and merge
-if(!D.customCats) D.customCats={};
-var CATS = Object.assign({}, DEFAULT_CATS, D.customCats);
-function refreshCats(){ if(!D.customCats) D.customCats={}; CATS = Object.assign({}, DEFAULT_CATS, D.customCats); }
+
 var MONTHS=["Janeiro","Fevereiro","Marco","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 var CARD_ICONS={credit:"💳",debit:"🏦",pix:"📱",cash:"💵",boleto:"📄"};
 var CARD_NAMES={credit:"Credito",debit:"Debito Auto",pix:"PIX",cash:"Dinheiro",boleto:"Boleto"};
@@ -448,6 +445,10 @@ var D=(function(){
   }catch(e){}
   return best;
 })();
+// Initialize CATS after D is loaded
+if(!D.customCats) D.customCats={};
+var CATS = Object.assign({}, DEFAULT_CATS, D.customCats);
+function refreshCats(){ if(!D.customCats) D.customCats={}; CATS = Object.assign({}, DEFAULT_CATS, D.customCats); }
 var sheetsUrl=localStorage.getItem("fin_sheets_url")||"";
 var curM=new Date().getMonth(),curY=new Date().getFullYear();
 var txFilter="all",cardTab="cards",editIdx=-1,isListening=false,recog=null;
