@@ -337,6 +337,17 @@ function doGet() {
       <input type="file" id="json-file" accept=".json,.txt" style="display:none">
     </div>
     <div class="scard">
+      <h3>Categorias personalizadas</h3>
+      <p>Adicione suas proprias categorias.</p>
+      <div id="custom-cats-list" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input class="inp" id="new-cat-icon" placeholder="emoji" style="width:64px;margin-bottom:0;text-align:center;"/>
+        <input class="inp" id="new-cat-name" placeholder="Nome da categoria" style="margin-bottom:0;flex:1;"/>
+      </div>
+      <button class="btn btng" id="add-cat-btn" style="width:100%;justify-content:center;">+ Adicionar categoria</button>
+    </div>
+
+    <div class="scard">
       <h3>Apagar dados</h3>
       <p>Remove todos os dados deste dispositivo.</p>
       <button class="btn btnr" id="clear-btn">Apagar tudo</button>
@@ -656,7 +667,8 @@ function removeCustomCat(name){
   toast('Categoria removida.','ok');
 }
 
-document.getElementById("add-cat-btn").addEventListener("click", function(){
+var addCatBtn = document.getElementById("add-cat-btn");
+if(addCatBtn) addCatBtn.addEventListener("click", function(){
   var icon = document.getElementById("new-cat-icon").value.trim()||"📌";
   var name = document.getElementById("new-cat-name").value.trim();
   if(!name){ toast('Digite o nome da categoria.','err'); return; }
@@ -665,7 +677,7 @@ document.getElementById("add-cat-btn").addEventListener("click", function(){
   refreshCats(); save(); renderCustomCats(); populateCatSelects();
   document.getElementById("new-cat-icon").value='';
   document.getElementById("new-cat-name").value='';
-  toast('Categoria "'+name+'" adicionada!','ok');
+  toast('Categoria adicionada!','ok');
 });
 
 // Update local categorization to use new category names
