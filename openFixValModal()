@@ -1,0 +1,72 @@
+// Substitua apenas a parte do fixlist na função renderCal()
+// Encontre a seção "sorted.forEach(function(tx){" e troque por:
+
+sorted.forEach(function(tx){
+  var c=CATS[tx.category]||CATS.Outros,day=getDay(tx),isDue=!!dueDays[day];
+  var fi=document.createElement("div");
+  fi.className="fixitem"+(isDue?" due":"");
+  
+  var dayEl=document.createElement("div");
+  dayEl.className="fixday";
+  var dn=document.createElement("div");
+  dn.className="fixdn";
+  dn.textContent=day;
+  var dl=document.createElement("div");
+  dl.className="fixdl";
+  dl.textContent="dia";
+  dayEl.appendChild(dn);
+  dayEl.appendChild(dl);
+  
+  var icoEl=document.createElement("div");
+  icoEl.className="txicon";
+  icoEl.style.cssText="background:"+c.bg+";width:32px;height:32px;font-size:14px;";
+  icoEl.textContent=c.icon;
+  
+  var inf=document.createElement("div");
+  inf.className="txinfo";
+  inf.style.cursor="default";
+  var de=document.createElement("div");
+  de.className="txdesc";
+  de.textContent=tx.description;
+  var me=document.createElement("div");
+  me.className="txmeta";
+  me.textContent=tx.category+(tx.paymentMethod?" - "+tx.paymentMethod:"");
+  inf.appendChild(de);
+  inf.appendChild(me);
+  
+  var rr=document.createElement("div");
+  rr.style.cssText="display:flex;flex-direction:column;align-items:flex-end;gap:3px;";
+  var am=document.createElement("div");
+  am.className="txamt db";
+  am.textContent="-"+fmt(tx.amount);
+  rr.appendChild(am);
+  
+  // NOVO: Botão para editar valor do mês
+  var editBtn=document.createElement("button");
+  editBtn.style.cssText="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:color .2s;";
+  editBtn.textContent="✎";
+  editBtn.title="Editar valor deste mês";
+  editBtn.onmouseover=function(){ this.style.color="var(--green)"; };
+  editBtn.onmouseout=function(){ this.style.color="var(--muted)"; };
+  (function(transaction){
+    editBtn.addEventListener("click",function(e){
+      e.stopPropagation();
+      openFixValModal(transaction);
+    });
+  })(tx);
+  
+  if(isDue){
+    var db2=document.createElement("span");
+    db2.className="duebdg";
+    db2.textContent="amanha";
+    rr.appendChild(db2);
+  }
+  
+  rr.appendChild(editBtn); // Adiciona o botão de editar
+  
+  fi.appendChild(dayEl);
+  fi.appendChild(icoEl);
+  fi.appendChild(inf);
+  fi.appendChild(rr);
+  fl.appendChild(fi);
+});
