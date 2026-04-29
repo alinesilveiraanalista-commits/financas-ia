@@ -627,7 +627,7 @@ sorted.forEach(function(tx){
   delBtn.title="Deletar esta instância";
   delBtn.onmouseover=function(){this.style.color="var(--red)";};
   delBtn.onmouseout=function(){this.style.color="var(--muted)";};
-  (function(txData){delBtn.addEventListener("click",function(e){e.stopPropagation();if(window.confirm("Deletar '"+txData.description+"' de "+txData.date+"?")){var idx=D.txs.indexOf(txData);if(idx>=0){D.txs.splice(idx,1);save();renderCal();renderHome();toast("Deletado!","ok");}}});})(tx);
+  (function(txData){delBtn.addEventListener("click",function(e){e.stopPropagation();if(window.confirm("Deletar '"+txData.description+"' de "+txData.date+"?")){var encontrou=false;for(var i=0;i<D.txs.length;i++){if(D.txs[i].id===txData.id){D.txs.splice(i,1);encontrou=true;break;}}if(encontrou){save();renderCal();renderHome();renderTx();toast("Deletado!","ok");}}});})(tx);
   rr.appendChild(delBtn);
   fi.appendChild(dayEl);
   fi.appendChild(icoEl);
@@ -661,12 +661,29 @@ function saveFixVal(){
   var yr=modal.dataset.yr;
   var existingId=modal.dataset.existingId;
 
+  var found=false;
   if(existingId){
-    var tx=D.txs.find(function(t){ return String(t.id)===existingId; });
-    if(tx){ tx.amount=newAmt; }
-  } else if(D.txs.find(function(t){ return t.isFixed&&t.description===desc&&(t.date||"").slice(3)===mm+"/"+yr; })){
-    D.txs.forEach(function(t){ if(t.isFixed&&t.description===desc&&(t.date||"").slice(3)===mm+"/"+yr) t.amount=newAmt; });
-  } else {
+    D.txs.forEach(function(t){ 
+      if(String(t.id)===existingId){ 
+        t.amount=newAmt; 
+        found=true;
+      } 
+    });
+  } 
+  
+  if(!found){
+    D.txs.forEach(function(t){ 
+      if(t.isFixed && t.description===desc){
+        var p=(t.date||"").split("/");
+        if(p.length>=3 && p[1]===mm && String(parseInt(p[2]))===yr){
+          t.amount=newAmt;
+          found=true;
+        }
+      }
+    });
+  }
+
+  if(!found){
     var template=getFixed().find(function(t){ return t.description===desc; });
     if(template){
       var day=getDay(template);
@@ -687,10 +704,12 @@ function saveFixVal(){
       });
     }
   }
+  
   save();
   modal.classList.remove("on");
   renderCal();
   renderHome();
+  renderTx();
   toast("Valor atualizado para "+MONTHS[parseInt(mm)-1]+"!","ok");
 }
 
