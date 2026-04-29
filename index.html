@@ -553,7 +553,89 @@ function openEdit(idx){var tx=D.txs[idx];if(!tx)return;editIdx=idx;document.getE
 function saveEdit(){var tx=D.txs[editIdx];if(!tx)return;tx.description=document.getElementById("ed-desc").value.trim()||tx.description;tx.amount=parseFloat(document.getElementById("ed-amt").value)||tx.amount;tx.date=document.getElementById("ed-date").value.trim()||tx.date;tx.category=document.getElementById("ed-cat").value;tx.paymentMethod=document.getElementById("ed-pay").value.trim();var typeVal=document.getElementById("ed-type").value;if(typeVal==="income"){tx.type="income";tx.isFixed=false;tx.fixedDay=null;}else if(typeVal==="expense-fixed"){tx.type="expense";tx.isFixed=true;tx.fixedDay=parseInt(document.getElementById("ed-fixday").value)||null;}else{tx.type="expense";tx.isFixed=false;tx.fixedDay=null;}save();document.getElementById("modal-edit").classList.remove("on");renderTx();renderHome();toast("Atualizado!","ok");}
 function getFixed(){var seen={};return D.txs.filter(function(t){if(!t.isFixed||t.type!=="expense")return false;var k=t.description+"|"+t.amount;if(seen[k])return false;seen[k]=true;return true;});}
 function getDay(tx){if(tx.fixedDay)return parseInt(tx.fixedDay);var p=(tx.date||"").split("/");return p.length?parseInt(p[0])||1:1;}
-function renderCal(){var mnames=["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];document.getElementById("cal-title").textContent=mnames[curM]+" de "+curY;var fixed=getFixed();var total=fixed.reduce(function(s,t){return s+t.amount;},0);var today=new Date();var tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);var dueDays={};fixed.forEach(function(t){var d=getDay(t),dt=new Date(curY,curM,d);if(dt.toDateString()===tomorrow.toDateString())dueDays[d]=true;});document.getElementById("cal-sub").textContent="Total fixo/mes: "+fmt(total)+(Object.keys(dueDays).length?" | Vence amanha!":"");var byDay={};fixed.forEach(function(t){var d=getDay(t);if(!byDay[d])byDay[d]=[];byDay[d].push(t);});var grid=document.getElementById("cal-grid");grid.innerHTML="";var firstDay=new Date(curY,curM,1).getDay(),dim=new Date(curY,curM+1,0).getDate(),prevDim=new Date(curY,curM,0).getDate();for(var i=firstDay-1;i>=0;i--){var od=document.createElement("div");od.className="calday oth";od.innerHTML="<div class='caldn'>"+(prevDim-i)+"</div>";grid.appendChild(od);}for(var d2=1;d2<=dim;d2++){var isT=today.getDate()===d2&&today.getMonth()===curM&&today.getFullYear()===curY,isDue=!!dueDays[d2],evs=byDay[d2]||[];var cell=document.createElement("div");cell.className="calday"+(isT?" tod":"")+(evs.length?" hev":"")+(isDue?" due":"");cell.innerHTML="<div class='caldn'>"+d2+"</div>";evs.slice(0,3).forEach(function(ev){var e=document.createElement("div");e.className="calev"+(isDue?" due":"");e.textContent=ev.description;cell.appendChild(e);});if(evs.length>3){var more=document.createElement("div");more.style.cssText="font-size:8px;color:var(--dim);";more.textContent="+"+(evs.length-3);cell.appendChild(more);}grid.appendChild(cell);}var rem=(firstDay+dim)%7;if(rem>0)for(var d3=1;d3<=7-rem;d3++){var nd=document.createElement("div");nd.className="calday oth";nd.innerHTML="<div class='caldn'>"+d3+"</div>";grid.appendChild(nd);}var fl=document.getElementById("fix-list");fl.innerHTML="";var sorted=fixed.slice().sort(function(a,b){return getDay(a)-getDay(b);});if(!sorted.length){fl.innerHTML='<div style="font-size:11px;color:var(--dim);padding:6px">Sem fixas. Registre com "fixo todo dia X".</div>';return;}sorted.forEach(function(tx){var c=CATS[tx.category]||CATS.Outros,day=getDay(tx),isDue=!!dueDays[day];var fi=document.createElement("div");fi.className="fixitem"+(isDue?" due":"");var dayEl=document.createElement("div");dayEl.className="fixday";var dn=document.createElement("div");dn.className="fixdn";dn.textContent=day;var dl=document.createElement("div");dl.className="fixdl";dl.textContent="dia";dayEl.appendChild(dn);dayEl.appendChild(dl);var icoEl=document.createElement("div");icoEl.className="txicon";icoEl.style.cssText="background:"+c.bg+";width:32px;height:32px;font-size:14px;";icoEl.textContent=c.icon;var inf=document.createElement("div");inf.className="txinfo";inf.style.cursor="default";var de=document.createElement("div");de.className="txdesc";de.textContent=tx.description;var me=document.createElement("div");me.className="txmeta";me.textContent=tx.category+(tx.paymentMethod?" - "+tx.paymentMethod:"");inf.appendChild(de);inf.appendChild(me);var rr=document.createElement("div");rr.style.cssText="display:flex;flex-direction:column;align-items:flex-end;gap:3px;";var am=document.createElement("div");am.className="txamt db";am.textContent="-"+fmt(tx.amount);rr.appendChild(am);if(isDue){var db2=document.createElement("span");db2.className="duebdg";db2.textContent="amanha";rr.appendChild(db2);}var editBtn=document.createElement("button");editBtn.style.cssText="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:color .2s;";editBtn.textContent="✎";editBtn.title="Editar valor deste mês";editBtn.onmouseover=function(){this.style.color="var(--green)";};editBtn.onmouseout=function(){this.style.color="var(--muted)";};(function(transaction){editBtn.addEventListener("click",function(e){e.stopPropagation();openFixValModal(transaction);});})(tx);rr.appendChild(editBtn);var delBtn=document.createElement("button");delBtn.style.cssText="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:color .2s;";delBtn.textContent="×";delBtn.title="Deletar esta instância";delBtn.onmouseover=function(){this.style.color="var(--red)";};delBtn.onmouseout=function(){this.style.color="var(--muted)";};(function(transaction){delBtn.addEventListener("click",function(e){e.stopPropagation();if(window.confirm("Deletar '"+transaction.description+"' de "+transaction.date+"?")){var idx=D.txs.indexOf(transaction);if(idx>=0){D.txs.splice(idx,1);save();renderCal();renderHome();toast("Deletado!","ok");}}});})(tx);rr.appendChild(delBtn);fi.appendChild(dayEl);fi.appendChild(icoEl);fi.appendChild(inf);fi.appendChild(rr);fl.appendChild(fi);});}
+function renderCal(){
+var mnames=["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+document.getElementById("cal-title").textContent=mnames[curM]+" de "+curY;
+var fixed=getFixed();
+var total=fixed.reduce(function(s,t){return s+t.amount;},0);
+var today=new Date();
+var tomorrow=new Date(today);
+tomorrow.setDate(tomorrow.getDate()+1);
+var dueDays={};
+fixed.forEach(function(t){var d=getDay(t),dt=new Date(curY,curM,d);if(dt.toDateString()===tomorrow.toDateString())dueDays[d]=true;});
+document.getElementById("cal-sub").textContent="Total fixo/mes: "+fmt(total)+(Object.keys(dueDays).length?" | Vence amanha!":"");
+var byDay={};
+fixed.forEach(function(t){var d=getDay(t);if(!byDay[d])byDay[d]=[];byDay[d].push(t);});
+var grid=document.getElementById("cal-grid");
+grid.innerHTML="";
+var firstDay=new Date(curY,curM,1).getDay(),dim=new Date(curY,curM+1,0).getDate(),prevDim=new Date(curY,curM,0).getDate();
+for(var i=firstDay-1;i>=0;i--){var od=document.createElement("div");od.className="calday oth";od.innerHTML="<div class='caldn'>"+(prevDim-i)+"</div>";grid.appendChild(od);}
+for(var d2=1;d2<=dim;d2++){var isT=today.getDate()===d2&&today.getMonth()===curM&&today.getFullYear()===curY,isDue=!!dueDays[d2],evs=byDay[d2]||[];var cell=document.createElement("div");cell.className="calday"+(isT?" tod":"")+(evs.length?" hev":"")+(isDue?" due":"");cell.innerHTML="<div class='caldn'>"+d2+"</div>";evs.slice(0,3).forEach(function(ev){var e=document.createElement("div");e.className="calev"+(isDue?" due":"");e.textContent=ev.description;cell.appendChild(e);});if(evs.length>3){var more=document.createElement("div");more.style.cssText="font-size:8px;color:var(--dim);";more.textContent="+"+(evs.length-3);cell.appendChild(more);}grid.appendChild(cell);}
+var rem=(firstDay+dim)%7;
+if(rem>0)for(var d3=1;d3<=7-rem;d3++){var nd=document.createElement("div");nd.className="calday oth";nd.innerHTML="<div class='caldn'>"+d3+"</div>";grid.appendChild(nd);}
+var fl=document.getElementById("fix-list");
+fl.innerHTML="";
+var sorted=fixed.slice().sort(function(a,b){return getDay(a)-getDay(b);});
+if(!sorted.length){fl.innerHTML='<div style="font-size:11px;color:var(--dim);padding:6px">Sem fixas. Registre com "fixo todo dia X".</div>';return;}
+sorted.forEach(function(tx){
+  var c=CATS[tx.category]||CATS.Outros,day=getDay(tx),isDue=!!dueDays[day];
+  var fi=document.createElement("div");
+  fi.className="fixitem"+(isDue?" due":"");
+  var dayEl=document.createElement("div");
+  dayEl.className="fixday";
+  var dn=document.createElement("div");
+  dn.className="fixdn";
+  dn.textContent=day;
+  var dl=document.createElement("div");
+  dl.className="fixdl";
+  dl.textContent="dia";
+  dayEl.appendChild(dn);
+  dayEl.appendChild(dl);
+  var icoEl=document.createElement("div");
+  icoEl.className="txicon";
+  icoEl.style.cssText="background:"+c.bg+";width:32px;height:32px;font-size:14px;";
+  icoEl.textContent=c.icon;
+  var inf=document.createElement("div");
+  inf.className="txinfo";
+  inf.style.cursor="default";
+  var de=document.createElement("div");
+  de.className="txdesc";
+  de.textContent=tx.description;
+  var me=document.createElement("div");
+  me.className="txmeta";
+  me.textContent=tx.category+(tx.paymentMethod?" - "+tx.paymentMethod:"");
+  inf.appendChild(de);
+  inf.appendChild(me);
+  var rr=document.createElement("div");
+  rr.style.cssText="display:flex;flex-direction:column;align-items:flex-end;gap:3px;";
+  var am=document.createElement("div");
+  am.className="txamt db";
+  am.textContent="-"+fmt(tx.amount);
+  rr.appendChild(am);
+  if(isDue){var db2=document.createElement("span");db2.className="duebdg";db2.textContent="amanha";rr.appendChild(db2);}
+  var editBtn=document.createElement("button");
+  editBtn.style.cssText="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:color .2s;";
+  editBtn.textContent="✎";
+  editBtn.title="Editar valor deste mês";
+  editBtn.onmouseover=function(){this.style.color="var(--green)";};
+  editBtn.onmouseout=function(){this.style.color="var(--muted)";};
+  (function(txData){editBtn.addEventListener("click",function(e){e.stopPropagation();openFixValModal(txData);});})(tx);
+  rr.appendChild(editBtn);
+  var delBtn=document.createElement("button");
+  delBtn.style.cssText="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:color .2s;";
+  delBtn.textContent="×";
+  delBtn.title="Deletar esta instância";
+  delBtn.onmouseover=function(){this.style.color="var(--red)";};
+  delBtn.onmouseout=function(){this.style.color="var(--muted)";};
+  (function(txData){delBtn.addEventListener("click",function(e){e.stopPropagation();if(window.confirm("Deletar '"+txData.description+"' de "+txData.date+"?")){var idx=D.txs.indexOf(txData);if(idx>=0){D.txs.splice(idx,1);save();renderCal();renderHome();toast("Deletado!","ok");}}});})(tx);
+  rr.appendChild(delBtn);
+  fi.appendChild(dayEl);
+  fi.appendChild(icoEl);
+  fi.appendChild(inf);
+  fi.appendChild(rr);
+  fl.appendChild(fi);
+});
+}
 function openFixValModal(tx){
   var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
   var existing=D.txs.find(function(t){
