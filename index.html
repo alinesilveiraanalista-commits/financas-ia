@@ -551,21 +551,21 @@ function renderTx(){var lbl=MONTHS[curM].slice(0,3)+" "+curY;["mlbl1","mlbl2"].f
 function deleteTx(idx,tx){if(tx.isFixed){var choice=window.confirm("Despesa fixa detectada.\nOK = apagar TODOS os meses\nCancelar = apagar so este");if(choice){var desc=tx.description,amt=tx.amount;D.txs=D.txs.filter(function(t){return !(t.isFixed&&t.description===desc&&t.amount===amt);});save();renderTx();renderHome();toast("Fixas removidas.","ok");}else{D.txs.splice(idx,1);save();renderTx();renderHome();toast("Removido.","ok");}}else{if(window.confirm("Deletar este lancamento?")){D.txs.splice(idx,1);save();renderTx();renderHome();toast("Removido.","ok");}}}
 function openEdit(idx){var tx=D.txs[idx];if(!tx)return;editIdx=idx;document.getElementById("ed-desc").value=tx.description;document.getElementById("ed-amt").value=tx.amount;document.getElementById("ed-date").value=tx.date;document.getElementById("ed-cat").value=tx.category||"Outros";document.getElementById("ed-pay").value=tx.paymentMethod||"";var typeVal=tx.type==="income"?"income":tx.isFixed?"expense-fixed":"expense-variable";document.getElementById("ed-type").value=typeVal;document.getElementById("ed-fixday").style.display=tx.isFixed?"block":"none";document.getElementById("ed-fixday").value=tx.fixedDay||"";document.getElementById("modal-edit").classList.add("on");}
 function saveEdit(){var tx=D.txs[editIdx];if(!tx)return;tx.description=document.getElementById("ed-desc").value.trim()||tx.description;tx.amount=parseFloat(document.getElementById("ed-amt").value)||tx.amount;tx.date=document.getElementById("ed-date").value.trim()||tx.date;tx.category=document.getElementById("ed-cat").value;tx.paymentMethod=document.getElementById("ed-pay").value.trim();var typeVal=document.getElementById("ed-type").value;if(typeVal==="income"){tx.type="income";tx.isFixed=false;tx.fixedDay=null;}else if(typeVal==="expense-fixed"){tx.type="expense";tx.isFixed=true;tx.fixedDay=parseInt(document.getElementById("ed-fixday").value)||null;}else{tx.type="expense";tx.isFixed=false;tx.fixedDay=null;}save();document.getElementById("modal-edit").classList.remove("on");renderTx();renderHome();toast("Atualizado!","ok");}
-function getFixed(){var seen={};return D.txs.filter(function(t){if(!t.isFixed||t.type!=="expense")return false;var k=t.description+"|"+t.amount;if(seen[k])return false;seen[k]=true;return true;});}
+function getFixed(){var seen={};return D.txs.filter(function(t){if(!t.isFixed||t.type!=="expense")return false;var k=t.description;if(seen[k])return false;seen[k]=true;return true;});}
 function getDay(tx){if(tx.fixedDay)return parseInt(tx.fixedDay);var p=(tx.date||"").split("/");return p.length?parseInt(p[0])||1:1;}
 function renderCal(){
 var mnames=["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 document.getElementById("cal-title").textContent=mnames[curM]+" de "+curY;
-var fixed=getFixed();
-var total=fixed.reduce(function(s,t){return s+t.amount;},0);
+var allFixed = D.txs.filter(function(t){return t.isFixed && t.type==="expense";});
+var total=allFixed.reduce(function(s,t){return s+t.amount;},0);
 var today=new Date();
 var tomorrow=new Date(today);
 tomorrow.setDate(tomorrow.getDate()+1);
 var dueDays={};
-fixed.forEach(function(t){var d=getDay(t),dt=new Date(curY,curM,d);if(dt.toDateString()===tomorrow.toDateString())dueDays[d]=true;});
+allFixed.forEach(function(t){var d=getDay(t),dt=new Date(curY,curM,d);if(dt.toDateString()===tomorrow.toDateString())dueDays[d]=true;});
 document.getElementById("cal-sub").textContent="Total fixo/mes: "+fmt(total)+(Object.keys(dueDays).length?" | Vence amanha!":"");
 var byDay={};
-fixed.forEach(function(t){var d=getDay(t);if(!byDay[d])byDay[d]=[];byDay[d].push(t);});
+allFixed.forEach(function(t){var d=getDay(t);if(!byDay[d])byDay[d]=[];byDay[d].push(t);});
 var grid=document.getElementById("cal-grid");
 grid.innerHTML="";
 var firstDay=new Date(curY,curM,1).getDay(),dim=new Date(curY,curM+1,0).getDate(),prevDim=new Date(curY,curM,0).getDate();
@@ -575,7 +575,7 @@ var rem=(firstDay+dim)%7;
 if(rem>0)for(var d3=1;d3<=7-rem;d3++){var nd=document.createElement("div");nd.className="calday oth";nd.innerHTML="<div class='caldn'>"+d3+"</div>";grid.appendChild(nd);}
 var fl=document.getElementById("fix-list");
 fl.innerHTML="";
-var sorted=fixed.slice().sort(function(a,b){return getDay(a)-getDay(b);});
+var sorted=allFixed.slice().sort(function(a,b){return getDay(a)-getDay(b);});
 if(!sorted.length){fl.innerHTML='<div style="font-size:11px;color:var(--dim);padding:6px">Sem fixas. Registre com "fixo todo dia X".</div>';return;}
 sorted.forEach(function(tx){
   var c=CATS[tx.category]||CATS.Outros,day=getDay(tx),isDue=!!dueDays[day];
@@ -627,7 +627,7 @@ sorted.forEach(function(tx){
   delBtn.title="Deletar esta instância";
   delBtn.onmouseover=function(){this.style.color="var(--red)";};
   delBtn.onmouseout=function(){this.style.color="var(--muted)";};
-  (function(txData){delBtn.addEventListener("click",function(e){e.stopPropagation();if(window.confirm("Deletar '"+txData.description+"' de "+txData.date+"?")){var encontrou=false;for(var i=0;i<D.txs.length;i++){if(D.txs[i].id===txData.id){D.txs.splice(i,1);encontrou=true;break;}}if(encontrou){save();renderCal();renderHome();renderTx();toast("Deletado!","ok");}}});})(tx);
+  (function(txData){delBtn.addEventListener("click",function(e){e.stopPropagation();if(window.confirm("Deletar '"+txData.description+"' de "+txData.date+" ("+fmt(txData.amount)+")")){for(var i=0;i<D.txs.length;i++){if(D.txs[i].id===txData.id){D.txs.splice(i,1);save();renderCal();renderHome();renderTx();toast("Deletado!","ok");break;}}}});})(tx);
   rr.appendChild(delBtn);
   fi.appendChild(dayEl);
   fi.appendChild(icoEl);
@@ -661,29 +661,31 @@ function saveFixVal(){
   var yr=modal.dataset.yr;
   var existingId=modal.dataset.existingId;
 
-  var found=false;
+  // Se já existe transação deste mês específico, atualiza ela
   if(existingId){
     D.txs.forEach(function(t){ 
       if(String(t.id)===existingId){ 
         t.amount=newAmt; 
-        found=true;
       } 
     });
-  } 
-  
-  if(!found){
-    D.txs.forEach(function(t){ 
+  } else {
+    // Procura por qualquer instância deste mês e deleta as antigas
+    var toDelete = [];
+    D.txs.forEach(function(t, idx){ 
       if(t.isFixed && t.description===desc){
         var p=(t.date||"").split("/");
         if(p.length>=3 && p[1]===mm && String(parseInt(p[2]))===yr){
-          t.amount=newAmt;
-          found=true;
+          toDelete.push(idx);
         }
       }
     });
-  }
-
-  if(!found){
+    
+    // Deleta as antigas (do final pra trás pra não messed up os índices)
+    for(var i=toDelete.length-1; i>=0; i--){
+      D.txs.splice(toDelete[i], 1);
+    }
+    
+    // Cria nova com o valor correto
     var template=getFixed().find(function(t){ return t.description===desc; });
     if(template){
       var day=getDay(template);
@@ -1000,4 +1002,3 @@ renderHome();
 </script>
 </body>
 </html>
- 
