@@ -10,7 +10,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
 body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
-.bnav{display:flex;background:var(--s1);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+.bnav{display:flex;justify-content:space-around;align-items:center;background:var(--s1);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;border:none;background:none;color:var(--muted);font-family:"DM Sans",sans-serif;font-size:10px;cursor:pointer;}
 .nb.on{color:var(--green);}
 .nb svg{width:20px;height:20px;}
@@ -484,6 +484,7 @@ function doGet() {
     <div id="recommendations-list" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
+<div class="bnav">
   <button class="nb on" data-page="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Início</button>
   <button class="nb" data-page="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>💬 Registrar</button>
   <button class="nb" data-page="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>📋 Lançamentos</button>
@@ -491,7 +492,7 @@ function doGet() {
   <button class="nb" data-page="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cartões</button>
   <button class="nb" data-page="analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5H17"/></svg>📊 Análise</button>
   <button class="nb" data-page="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>⚙️ Config</button>
-</nav>
+</div>
 <div class="mbg" id="modal-replicate"><div class="modal">
   <button class="mclose" id="close-replicate">&#215;</button>
   <h3>🔁 Replicar para o ano</h3>
@@ -1668,74 +1669,27 @@ if(addCatBtn) addCatBtn.addEventListener("click", function(){
 );
 
 function parseLocal(text){
-  var today=new Date();
-  var todayStr=String(today.getDate()).padStart(2,"0")+"/"+String(today.getMonth()+1).padStart(2,"0")+"/"+today.getFullYear();
-  var isIncome=/receb|salari|ganh|pagaram|entrada|freela|renda/i.test(text);
-  var isFixed=/fixo|todo dia|todo mes|recorrente|mensalidade/i.test(text);
-  var fixedDayMatch=text.match(/dia\s+(\d{1,2})/i);
-  var fixedDay=fixedDayMatch?parseInt(fixedDayMatch[1]):null;
-  var instMatch=text.match(/(\d+)\s*x|em\s+(\d+)\s*(vezes|parcelas)/i);
-  var installmentOf=instMatch?parseInt(instMatch[1]||instMatch[2]):1;
-  var isInstallment=installmentOf>1;
-  var amtMatch=text.match(/R\$\s*([\d.,]+)|(?:^|\s)(\d+(?:[.,]\d+)?)\s*(?:reais)?/i);
-  var amount=0;
-  if(amtMatch){var raw=(amtMatch[1]||amtMatch[2]||"").replace(/\./g,"").replace(",",".");amount=parseFloat(raw)||0;}
-  if(isInstallment&&installmentOf>1)amount=amount/installmentOf;
-  var dateMatch=text.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
-  var date=todayStr;
-  if(dateMatch){var d=dateMatch[1].padStart(2,"0"),m=dateMatch[2].padStart(2,"0"),y=dateMatch[3]?(""+dateMatch[3]).length===2?"20"+dateMatch[3]:dateMatch[3]:""+today.getFullYear();date=d+"/"+m+"/"+y;}
-  var t=text.toLowerCase();
-  var category="Outros";
-  if(isIncome)category="Ganho";
-  else if(/mercado|supermerc|hortifruti|padaria|acougue|pao|leite|queijo|verdura|frutas/i.test(t))category="Mercado";
-  else if(/feira/i.test(t))category="Feira";
-  else if(/ifood|rappi|delivery/i.test(t))category="Ifood";
-  else if(/restaurante|lanche|pizza|hamburguer|sushi|churrasco|almoco|jantar|fondue|hidromel|chopp|bar/i.test(t))category="Restaurante";
-  else if(/uber|99|taxi|onibus|metro|transporte|pedagio|estacionamento|nutag/i.test(t))category="Uber e Transporte";
-  else if(/gasolina|combustivel|alcool|posto|ipva|seguro auto|manutencao carro/i.test(t))category="Carro";
-  else if(/aluguel|condominio|luz|agua|gas|financiamento|ape|casa|manutencao|limpeza|faxina/i.test(t))category="Casa";
-  else if(/medico|hospital|farmacia|remedio|consulta|exame|plano de saude|convenio|dentista|laboratorio|academia|gym|totalpass|fitness/i.test(t))category="Saude e Fitness";
-  else if(/netflix|spotify|amazon|disney|youtube|streaming|internet|plano celular|tim|claro|vivo/i.test(t))category="Assinaturas e Planos";
-  else if(/viagem|hotel|passagem|aeroporto|hospedagem|airbnb/i.test(t))category="Viagens";
-  else if(/escola|curso|faculdade|livro|material|educacao|estudo/i.test(t))category="Estudos";
-  else if(/salao|cabelo|manicure|pedicure|depilacao|estetica|spa|beleza|maquiagem|cuidado|terapia/i.test(t))category="Auto-cuidado";
-  else if(/pet|veterinario|racao|cobasi|banho tosa|animal|cachorro|gato/i.test(t))category="Pet";
-  else if(/investimento|poupanca|cdb|fundo|acoes|tesouro/i.test(t))category="Investimentos";
-  else if(/presente|gift|aniversario|festa|evento|show|cinema|teatro|casamento/i.test(t))category="Festas e Eventos";
-  else if(/shopping|roupa|calcado|eletronico|compra/i.test(t))category="Shopping e Compras";
-  else if(/ajuda|doacao|presente|mimo/i.test(t))category="Ajudas e Presentes";
-  var desc=text.replace(/R\$\s*[\d.,]+/g,"").replace(/\d+\s*x/gi,"").replace(/em\s+\d+\s*(vezes|parcelas)/gi,"").replace(/fixo\s*(todo\s*dia\s*\d+)?/gi,"").replace(/hoje|ontem|amanha/gi,"").trim();
-  if(!desc||desc.length<2)desc=text.trim();
-  desc=desc.charAt(0).toUpperCase()+desc.slice(1);
-  return Promise.resolve({transactions:[{description:desc,amount:amount,type:isIncome?"income":"expense",isFixed:isFixed,fixedDay:fixedDay,isInstallment:isInstallment,installmentOf:installmentOf,installmentCurrent:1,category:category,date:date,paymentMethod:""}
-],summary:(isIncome?"Ganho":"Gasto")+" registrado: "+desc+" "+fmt(amount)+(isFixed?" (fixo)":"")+(isInstallment?" em "+installmentOf+"x":"")}
-);
-}
-
-if(sheetsUrl)document.getElementById("sheets-url").value=sheetsUrl;
-document.getElementById("debug-btn").addEventListener("click",function(){
-  var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
-  var info="Mes atual: "+mm+"/"+yr+"\n";
-  info+="Total lancamentos salvos: "+D.txs.length+"\n\n";
-  if(D.txs.length===0){info+="NENHUM LANCAMENTO SALVO!\nChave localStorage: fin5";}
-  else{
-    info+="Todos os lancamentos:\n";
-    D.txs.forEach(function(t,i){
-      var p=(t.date||"").split("/");
-      var match=p.length>=3&&p[1]===mm&&String(parseInt(p[2]))===yr;
-      info+=(i+1)+". "+t.description+" | "+t.date+" | fixo:"+t.isFixed+" | aparece:"+match+"\n";
-    }
-);
-  }
-  alert(info);
+//   alert(info);
 }
 );
 updateSyncUI();
 populateCatSelects();
 renderCustomCats();
-goPage("home");
+// Adicionar alguns dados de teste
+if(D.txs.length === 0) {
+  var today = new Date();
+  var month = String(today.getMonth() + 1).padStart(2, "0");
+  var year = today.getFullYear();
+  D.txs.push({description: "Salário", amount: 5000, type: "income", date: "01/" + month + "/" + year, isFixed: false, isInstallment: false, category: "Ganho"});
+  D.txs.push({description: "Aluguel", amount: 1500, type: "expense", date: "01/" + month + "/" + year, isFixed: true, isInstallment: false, category: "Casa"});
+  D.txs.push({description: "Mercado", amount: 250, type: "expense", date: "15/" + month + "/" + year, isFixed: false, isInstallment: false, category: "Mercado"});
+  D.txs.push({description: "Netflix", amount: 50, type: "expense", date: "10/" + month + "/" + year, isFixed: true, isInstallment: false, category: "Assinaturas e Planos"});
+  D.txs.push({description: "Restaurante", amount: 120, type: "expense", date: "12/" + month + "/" + year, isFixed: false, isInstallment: false, category: "Restaurante"});
+  save();
+}
 addMonth(0);
 renderHome();
+goPage("home");
 </script>
 </body>
 </html>
