@@ -649,10 +649,30 @@ function renderAnalysis(){
   var curExpense=curTxs.filter(function(t){return t.type==="expense";}).reduce(function(s,t){return s+t.amount;},0);
   var curBalance=curIncome-curExpense;
   var daysInMonth=new Date(curY,curM+1,0).getDate();
-  var daysPassed=today.getDate();
-  var daysRemaining=daysInMonth-daysPassed;
-  var avgDailyExpense=curExpense>0?curExpense/daysPassed:avgExpense/30;
-  var projectedExpense=curExpense+(avgDailyExpense*daysRemaining);
+  var isCurrentMonth=(curM===today.getMonth()&&curY===today.getFullYear());
+  var daysPassed=isCurrentMonth?Math.max(today.getDate(),1):daysInMonth;
+  var daysRemaining=isCurrentMonth?daysInMonth-today.getDate():0;
+
+  // Usar média dos últimos 3 meses de gastos variáveis para projeção
+  var historicVarExpenses=[];
+  for(var hi=1;hi<=3;hi++){
+    var hm=curM-hi; var hy=curY;
+    if(hm<0){hm+=12;hy--;}
+    var hmm=String(hm+1).padStart(2,"0"),hyr=String(hy);
+    var htxs=D.txs.filter(function(t){var p=(t.date||"").split("/");return p.length>=3&&p[1]===hmm&&String(parseInt(p[2]))===hyr;});
+    var hvar=htxs.filter(function(t){return t.type==="expense"&&!t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+    if(hvar>0) historicVarExpenses.push(hvar);
+  }
+  var avgMonthlyVar=historicVarExpenses.length>0?historicVarExpenses.reduce(function(s,v){return s+v;},0)/historicVarExpenses.length:0;
+  var avgDailyExpense=avgMonthlyVar>0?avgMonthlyVar/daysInMonth:0;
+
+  // Gastos variáveis já lançados este mês
+  var varLancado=curTxs.filter(function(t){return t.type==="expense"&&!t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+  // Gastos fixos já lançados este mês (já foram todos lançados, não projetar)
+  var fixLancado=curTxs.filter(function(t){return t.type==="expense"&&t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+  // Projeção: fixos (já completos) + variáveis já lançados + projeção dos dias restantes
+  var varRestante=Math.max(avgDailyExpense*daysRemaining - varLancado, 0);
+  var projectedExpense=fixLancado+varLancado+varRestante;
   var projectedBalance=curIncome-projectedExpense;
   
   var projDiv=document.getElementById("projection-section");
@@ -1298,124 +1318,4 @@ document.getElementById("delete-all-fixed-btn").addEventListener("click",deleteA
 document.getElementById("export-sync-btn").addEventListener("click", function(){
   try {
     var json = JSON.stringify(D, null, 2);
-    var blob = new Blob([json], {type:'text/plain'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'financas-sync.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-    toast('Backup baixado! Envie pelo WhatsApp para voce mesmo.','ok');
-  }
- catch(e) {
-    toast('Erro ao exportar: ' + e.message, 'err');
-  }
-});
-
-document.getElementById("import-sync-drop").addEventListener("click", function(){
-  document.getElementById("import-sync-file").click();
-});
-document.getElementById("import-sync-file").addEventListener("change", function(e){
-  var file = e.target.files[0]; if(!file) return;
-  var r = new FileReader();
-  r.onload = function(ev){
-    try {
-      var imp = JSON.parse(ev.target.result);
-      var txs = imp.txs || imp.transactions || (Array.isArray(imp)?imp:[]);
-      var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
-      var newOnes = txs.filter(function(t){ return !existingIds[t.id]; });
-      D.txs = D.txs.concat(newOnes);
-      if(imp.cards) imp.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
-      if(imp.goals) imp.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
-      save(); renderHome();
-      toast(newOnes.length + ' lancamentos importados!','ok');
-    }
- catch(e){ toast('Erro ao importar.','err'); }
-  };
-  r.readAsText(file,'UTF-8');
-});
-
-function populateCatSelects(){
-  var cats = Object.keys(CATS).filter(function(c){ return c!=="Ganho"&&c!=="Parcela"; });
-  var allCats = Object.keys(CATS);
-  ["ed-cat","goal-cat"].forEach(function(id){
-    var sel = document.getElementById(id);
-    if(!sel) return;
-    var cur = sel.value;
-    sel.innerHTML = (id==="ed-cat"?allCats:cats).map(function(c){ return '<option>'+c+'</option>'; }).join('');
-    if(cur) sel.value = cur;
-  });
-}
-
-function renderCustomCats(){
-  var list = document.getElementById("custom-cats-list");
-  if(!list) return;
-  var custom = D.customCats||{};
-  var customKeys = Object.keys(custom);
-  list.innerHTML = '';
-  if(!customKeys.length){
-    var empty = document.createElement('div');
-    empty.style.cssText = 'font-size:11px;color:var(--dim)';
-    empty.textContent = 'Nenhuma categoria personalizada.';
-    list.appendChild(empty);
-    return;
-  }
-  customKeys.forEach(function(name){
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;';
-    var ico = document.createElement('span');
-    ico.textContent = custom[name].icon;
-    var lbl = document.createElement('span');
-    lbl.style.cssText = 'font-size:12px;flex:1;';
-    lbl.textContent = name;
-    var btn = document.createElement('button');
-    btn.style.cssText = 'background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;';
-    btn.textContent = 'X';
-    (function(n){ btn.addEventListener('click', function(){ removeCustomCat(n); }); })(name);
-    wrap.appendChild(ico); wrap.appendChild(lbl); wrap.appendChild(btn);
-    list.appendChild(wrap);
-  });
-}
-
-function removeCustomCat(name){
-  delete D.customCats[name];
-  refreshCats(); save(); renderCustomCats(); populateCatSelects();
-  toast('Categoria removida.','ok');
-}
-
-var addCatBtn = document.getElementById("add-cat-btn");
-if(addCatBtn) addCatBtn.addEventListener("click", function(){
-  var icon = document.getElementById("new-cat-icon").value.trim()||"📌";
-  var name = document.getElementById("new-cat-name").value.trim();
-  if(!name){ toast('Digite o nome da categoria.','err'); return; }
-  if(!D.customCats) D.customCats={};
-  D.customCats[name] = {icon:icon, color:"#6b6b85", bg:"rgba(107,107,133,0.1)"};
-  refreshCats(); save(); renderCustomCats(); populateCatSelects();
-  document.getElementById("new-cat-icon").value='';
-  document.getElementById("new-cat-name").value='';
-  toast('Categoria adicionada!','ok');
-});
-
-updateSyncUI();
-populateCatSelects();
-renderCustomCats();
-// Adicionar alguns dados de teste
-if(D.txs.length === 0) {
-  var today = new Date();
-  var month = String(today.getMonth() + 1).padStart(2, "0");
-  var year = today.getFullYear();
-  D.txs.push({description: "Salário", amount: 5000, type: "income", date: "01/" + month + "/" + year, isFixed: false, isInstallment: false, category: "Ganho"});
-  D.txs.push({description: "Aluguel", amount: 1500, type: "expense", date: "01/" + month + "/" + year, isFixed: true, isInstallment: false, category: "Casa"});
-  D.txs.push({description: "Mercado", amount: 250, type: "expense", date: "15/" + month + "/" + year, isFixed: false, isInstallment: false, category: "Mercado"});
-  D.txs.push({description: "Netflix", amount: 50, type: "expense", date: "10/" + month + "/" + year, isFixed: true, isInstallment: false, category: "Assinaturas e Planos"});
-  D.txs.push({description: "Restaurante", amount: 120, type: "expense", date: "12/" + month + "/" + year, isFixed: false, isInstallment: false, category: "Restaurante"});
-  save();
-}
-addMonth(0);
-renderHome();
-goPage("home");
-</script>
-</body>
-</html>
+    var blob 
