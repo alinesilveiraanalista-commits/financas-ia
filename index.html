@@ -134,6 +134,7 @@ textarea::placeholder{color:var(--dim);}
 </style></head><body><div class="app"><div class="pg on" id="pg-home"><div class="tbar">
 <div><div class="ttl">financa.ia</div><div class="tsub" id="home-sub"></div></div>
 <div class="mnav"><button id="pm1">&#8249;</button><div class="mlbl" id="mlbl1"></div><button id="nm1">&#8250;</button></div>
+<button id="hoje-btn" onclick="curM=new Date().getMonth();curY=new Date().getFullYear();addMonth(0);renderHome();" style="background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;">Hoje</button>
 </div><div style="flex:1;overflow-y:auto;"><div class="bstrip"><div class="bmain" id="bal-main">R$0,00</div>
 <div class="brow">
 <div class="bi"><label>💰 Ganhos</label><span style="color:var(--green)" id="bal-inc">R$0</span></div>
@@ -229,7 +230,8 @@ return ContentService.createTextOutput(JSON.stringify({ok:true,data:JSON.parse(j
 <input class="inp" id="new-cat-name" placeholder="Nome da categoria" style="margin-bottom:0;flex:1;"/>
 </div>
 <button class="btn btng" id="add-cat-btn" style="width:100%;justify-content:center;">+ Adicionar categoria</button>
-</div><div class="scard"><h3>🧹 Limpar duplicatas</h3><p>Remove lançamentos duplicados mantendo apenas um de cada.</p>
+</div><div class="scard"><h3>🔄 Restaurar meus fixos</h3><p>Restaura todos os seus gastos fixos de Jan a Jun 2026 com os valores corretos.</p>
+<button class="btn btng" id="restore-fixed-btn" style="width:100%;justify-content:center;">✅ Restaurar gastos fixos</button></div><div class="scard"><h3>🧹 Limpar duplicatas</h3><p>Remove lançamentos duplicados mantendo apenas um de cada.</p>
 <button class="btn btng" id="clean-dups-btn" style="width:100%;justify-content:center;margin-bottom:10px;">Encontrar e limpar duplicatas</button>
 <div id="dups-result" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:11px;color:var(--muted);line-height:1.8;margin-bottom:10px;"></div>
 </div><div class="sechd"><div class="sectit">💡 Dicas de Preenchimento</div></div>
@@ -827,6 +829,39 @@ document.getElementById("json-drop").addEventListener("click",function(){documen
 document.getElementById("json-file").addEventListener("change",function(e){if(e.target.files[0])importJSON(e.target.files[0]);});
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 document.getElementById("clean-dups-btn").addEventListener("click",cleanDuplicates);
+document.getElementById("restore-fixed-btn").addEventListener("click",function(){
+if(!window.confirm("Isso vai restaurar todos os seus gastos fixos de Jan-Jun 2026.\nSeus outros dados não serão afetados.\nContinuar?"))return;
+D.txs=D.txs.filter(function(t){return!(t.isFixed&&t.type==="expense");});
+var fixos=[
+{desc:"Financiamento Caixa",cat:"Casa",dia:"01",valores:{1:1291.78,2:1291.78,3:1289.78,4:1288.23,5:1287.48,6:1286.94}},
+{desc:"Netflix",cat:"Assinaturas e Planos",dia:"01",valor:44.90},
+{desc:"Conta de Luz",cat:"Casa",dia:"05",valores:{1:69.26,2:82.29,3:61.85,4:66.50,5:68.74,6:68.74}},
+{desc:"Seguro Carro Bradesco",cat:"Carro",dia:"08",valor:345.85},
+{desc:"Condominio e Boletos",cat:"Casa",dia:"15",valores:{1:615.74,2:716.53,3:733.39,4:720.84,5:734.41,6:780.27}},
+{desc:"Assinatura Magia Divina",cat:"Assinaturas e Planos",dia:"16",valor:80.00},
+{desc:"Internet Bradesco",cat:"Assinaturas e Planos",dia:"17",valor:109.71},
+{desc:"Plano Vivo",cat:"Assinaturas e Planos",dia:"18",valor:48.00},
+{desc:"Convenio Pets",cat:"Pet",dia:"18",valor:75.66},
+{desc:"Simples Nacional DAS 2026",cat:"Empresa",dia:"20",valores:{1:428.09,2:436.01,3:437.26,4:422.39,5:469.82,6:469.82}},
+{desc:"Convenio Medico Nubank",cat:"Saude e Fitness",dia:"22",valor:369.14},
+{desc:"Totalpass Bradesco",cat:"Saude e Fitness",dia:"26",valor:89.00},
+{desc:"Clube Libelo Bradesco",cat:"Assinaturas e Planos",dia:"28",valor:87.90},
+{desc:"Contadora Nubank",cat:"Empresa",dia:"30",valor:250.00}
+];
+var count=0;
+[1,2,3,4,5,6].forEach(function(mes){
+  var ano=2026;
+  var mm=String(mes).padStart(2,"0");
+  fixos.forEach(function(f){
+    var valor=f.valor||(f.valores&&f.valores[mes])||(f.valores&&f.valores[mes-1])||(f.valores&&f.valores[1])||0;
+    if(!valor)return;
+    D.txs.push({id:"fx_"+f.desc.replace(/\s/g,"_")+"_"+mm+"_"+ano+"_"+Math.random().toString(36).slice(2,5),description:f.desc,amount:valor,type:"expense",date:f.dia+"/"+mm+"/"+ano,isFixed:true,isInstallment:false,category:f.cat});
+    count++;
+  });
+});
+save();renderHome();renderCal();
+toast("✅ "+count+" fixos restaurados!","ok");
+});
 document.getElementById("clean-fixed-dups-btn").addEventListener("click",cleanFixedDuplicates);
 document.getElementById("delete-all-fixed-btn").addEventListener("click",deleteAllFixedExpenses);
 ["modal-edit","modal-card","modal-goal","modal-fix-val","modal-replicate"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
