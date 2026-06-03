@@ -769,21 +769,13 @@ var result = document.getElementById("dups-result");result.style.display = "bloc
 result.innerHTML = "<strong style='color:var(--green)'>✓ Sucesso!</strong><br>" + deleted + " lançamentos duplicados foram removidos.<br><br>Seus dados estão limpos agora.";
 toast(deleted + " duplicatas removidas!","ok");}
 function cleanFixedDuplicates(){
-var grouped = {};
-var toDelete = [];D.txs.forEach(function(t, idx) {
-if(t.isFixed && t.type === "expense") {
-var key = t.description + "|" + (t.date || "");
-if(!grouped[key]) grouped[key] = [];grouped[key].push(idx);}});Object.keys(grouped).forEach(function(key) {
-if(grouped[key].length > 1) {
-for(var i = 1; i < grouped[key].length; i++) {toDelete.push(grouped[key][i]);}}});
-if(!toDelete.length) {toast("Nenhuma duplicata encontrada!","ok");document.getElementById("fixed-dups-result").style.display = "none";
-return;}
-if(!window.confirm("Encontradas " + toDelete.length + " duplicatas de gastos fixos.\nVai deletar?")) return;
-toDelete.sort(function(a, b) { return b - a; }).forEach(function(idx) {D.txs.splice(idx, 1);
-});save();renderCal();renderHome();renderTx();
-var result = document.getElementById("fixed-dups-result");result.style.display = "block";
-result.innerHTML = "<strong style='color:var(--green)'>✓ Sucesso!</strong><br>" + toDelete.length + " duplicatas de gastos fixos removidas.<br><br>Mantém 1 de cada por mês.";
-toast(toDelete.length + " duplicatas removidas!","ok");}
+var grouped={};var toDelete=[];
+D.txs.forEach(function(t,idx){if(t.isFixed&&t.type==="expense"){var key=t.description+"|"+(t.date||"");if(!grouped[key])grouped[key]=[];grouped[key].push(idx);}});
+Object.keys(grouped).forEach(function(key){if(grouped[key].length>1){for(var i=1;i<grouped[key].length;i++){toDelete.push(grouped[key][i]);}}});
+if(!toDelete.length){toast("Nenhuma duplicata encontrada!","ok");return;}
+if(!window.confirm("Encontradas "+toDelete.length+" duplicatas.\nDeletar?"))return;
+toDelete.sort(function(a,b){return b-a;}).forEach(function(idx){D.txs.splice(idx,1);});
+save();renderCal();renderHome();renderTx();toast(toDelete.length+" duplicatas removidas!","ok");}
 function deleteAllFixedExpenses(){
 var fixedCount = D.txs.filter(function(t) { return t.isFixed && t.type === "expense"; }).length;
 if(!fixedCount) {toast("Nenhum gasto fixo encontrado.","err");return;}
@@ -830,7 +822,7 @@ document.getElementById("json-file").addEventListener("change",function(e){if(e.
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 document.getElementById("clean-dups-btn").addEventListener("click",cleanDuplicates);
 document.getElementById("restore-fixed-btn").addEventListener("click",function(){
-if(!window.confirm("Isso vai restaurar todos os seus gastos fixos de Jan-Jun 2026.\nSeus outros dados não serão afetados.\nContinuar?"))return;
+if(!window.confirm("Isso vai DELETAR todos os fixos atuais e restaurar os seus de Jan-Jun 2026.\nContinuar?"))return;
 D.txs=D.txs.filter(function(t){return!(t.isFixed&&t.type==="expense");});
 var fixos=[
 {desc:"Financiamento Caixa",cat:"Casa",dia:"01",valores:{1:1291.78,2:1291.78,3:1289.78,4:1288.23,5:1287.48,6:1286.94}},
