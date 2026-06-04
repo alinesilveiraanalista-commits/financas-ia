@@ -4,41 +4,41 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{font-family:sans-serif;background:#111;color:#eee;padding:20px}
-input{width:100%;padding:12px;background:#222;border:2px solid #444;color:#eee;border-radius:10px;font-size:15px;margin-bottom:16px;box-sizing:border-box}
-button{width:100%;padding:16px;background:#00e5a0;border:none;border-radius:10px;font-size:17px;font-weight:700;color:#000;cursor:pointer}
-#msg{margin-top:16px;padding:14px;border-radius:10px;font-size:14px}
+input,textarea{width:100%;padding:12px;background:#222;border:2px solid #444;color:#eee;border-radius:10px;font-size:13px;margin-bottom:12px;box-sizing:border-box}
+button{width:100%;padding:16px;background:#00e5a0;border:none;border-radius:10px;font-size:17px;font-weight:700;color:#000;cursor:pointer;margin-bottom:8px}
+#msg{margin-top:12px;padding:12px;border-radius:10px;font-size:13px;display:none}
 </style>
 </head>
 <body>
-<h2 style="color:#00e5a0;margin-bottom:16px">Deploy financa.ia</h2>
+<h2 style="color:#00e5a0;margin-bottom:4px">Deploy financa.ia</h2>
+<p style="font-size:12px;color:#888;margin-bottom:16px">Cole o token e o codigo HTML abaixo</p>
 <input type="password" id="tk" placeholder="Token GitHub (ghp_...)">
+<textarea id="code" rows="4" placeholder="Cole aqui o codigo do index.html (final-compact.html)"></textarea>
 <button id="btn">Atualizar app</button>
 <div id="msg"></div>
 <script>
 var R="alinesilveiraanalista-commits/financas-ia";
 document.getElementById("btn").addEventListener("click",function(){
   var t=document.getElementById("tk").value.trim();
+  var code=document.getElementById("code").value.trim();
   var m=document.getElementById("msg");
-  m.style.cssText="background:rgba(0,229,160,0.15);border:1px solid #00e5a0;color:#00e5a0;display:block";
-  m.textContent="Baixando conteudo...";
-  if(!t){m.style.background="rgba(255,77,109,0.15)";m.style.borderColor="#ff4d6d";m.style.color="#ff4d6d";m.textContent="Cole o token!";return;}
-  fetch("app.b64")
-  .then(function(r){return r.text()})
-  .then(function(C){
-    m.textContent="Conectando ao GitHub...";
+  m.style.display="block";
+  m.style.cssText="display:block;background:rgba(0,229,160,0.15);border:1px solid #00e5a0;color:#00e5a0;padding:12px;border-radius:10px";
+  if(!t||!code){m.style.background="rgba(255,77,109,0.15)";m.style.borderColor="#ff4d6d";m.style.color="#ff4d6d";m.textContent="Preencha token e codigo!";return;}
+  m.textContent="Conectando...";
+  var b64=btoa(unescape(encodeURIComponent(code)));
+  fetch("https://api.github.com/repos/"+R+"/contents/index.html",{
+    headers:{"Authorization":"Bearer "+t,"Accept":"application/vnd.github+json"}
+  }).then(function(r){return r.json()}).then(function(d){
+    if(!d.sha){m.style.color="#ff4d6d";m.textContent="Token invalido!";return;}
+    m.textContent="Enviando...";
     return fetch("https://api.github.com/repos/"+R+"/contents/index.html",{
-      headers:{"Authorization":"Bearer "+t,"Accept":"application/vnd.github+json"}
+      method:"PUT",
+      headers:{"Authorization":"Bearer "+t,"Content-Type":"application/json"},
+      body:JSON.stringify({message:"update",content:b64,sha:d.sha})
     }).then(function(r){return r.json()}).then(function(d){
-      if(!d.sha){m.style.color="#ff4d6d";m.textContent="Token invalido!";return;}
-      m.textContent="Enviando...";
-      return fetch("https://api.github.com/repos/"+R+"/contents/index.html",{
-        method:"PUT",
-        headers:{"Authorization":"Bearer "+t,"Content-Type":"application/json"},
-        body:JSON.stringify({message:"update",content:C.trim(),sha:d.sha})
-      }).then(function(r){return r.json()}).then(function(d){
-        if(d.commit){m.textContent="Atualizado! Aguarde 2 min."}
-        else{m.style.color="#ff4d6d";m.textContent="Erro: "+d.message}
-      });
+      if(d.commit){m.textContent="Atualizado! Aguarde 2 min."}
+      else{m.style.color="#ff4d6d";m.textContent="Erro: "+d.message}
     });
   }).catch(function(e){m.style.color="#ff4d6d";m.textContent="Erro: "+e.message});
 });
