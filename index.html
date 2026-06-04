@@ -676,7 +676,13 @@ function getDay(tx){if(tx.fixedDay)return parseInt(tx.fixedDay);var p=(tx.date||
 function renderCal(){
 var mnames=["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 document.getElementById("cal-title").textContent=mnames[curM]+" de "+curY;
-var allFixed = D.txs.filter(function(t){return t.isFixed && t.type==="expense";});
+var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
+var allFixed = D.txs.filter(function(t){
+  if(!t.isFixed||t.type!=="expense")return false;
+  var p=(t.date||"").split("/");
+  if(p.length<3)return true; // sem data definida, mostrar sempre
+  return p[1]===mm&&String(parseInt(p[2]))===yr;
+});
 var total=allFixed.reduce(function(s,t){return s+t.amount;},0);
 var today=new Date();
 var tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);
@@ -909,7 +915,7 @@ document.getElementById("json-file").addEventListener("change",function(e){if(e.
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 document.getElementById("clean-dups-btn").addEventListener("click",cleanDuplicates);
 document.getElementById("restore-fixed-btn").addEventListener("click",function(){
-if(!window.confirm("Vai deletar todos os fixos atuais e criar 1 de cada em Janeiro 2026.\nDepois use Replicar Ano para copiar para os outros meses.\nContinuar?"))return;
+if(!window.confirm("Vai deletar todos os fixos atuais e criar 1 de cada por mês para Jan-Dez 2026.\nContinuar?"))return;
 D.txs=D.txs.filter(function(t){return!(t.isFixed&&t.type==="expense");});
 var fixos=[
 {desc:"Financiamento Caixa",cat:"Casa",dia:"01",valor:1291.78},
@@ -927,75 +933,15 @@ var fixos=[
 {desc:"Clube Libelo Bradesco",cat:"Assinaturas e Planos",dia:"28",valor:87.90},
 {desc:"Contadora Nubank",cat:"Empresa",dia:"30",valor:250.00}
 ];
-fixos.forEach(function(f){
-D.txs.push({id:"fx_"+f.desc.replace(/\s/g,"_")+"_"+Math.random().toString(36).slice(2,6),description:f.desc,amount:f.valor,type:"expense",date:f.dia+"/01/2026",isFixed:true,isInstallment:false,category:f.cat});
-});
+for(var mes=1;mes<=12;mes++){
+  var mm=String(mes).padStart(2,"0");
+  fixos.forEach(function(f){
+    D.txs.push({id:"fx_"+f.desc.replace(/\s/g,"_")+"_"+mm+"_2026_"+Math.random().toString(36).slice(2,5),description:f.desc,amount:f.valor,type:"expense",date:f.dia+"/"+mm+"/2026",isFixed:true,isInstallment:false,category:f.cat});
+  });
+}
 save();renderHome();renderCal();
-toast("✅ "+fixos.length+" fixos criados em Jan 2026! Agora use Replicar Ano.","ok");
+toast("✅ "+(fixos.length*12)+" fixos criados para Jan-Dez 2026! Edite valores no Calendário.","ok");
 });
 document.getElementById("clean-fixed-dups-btn").addEventListener("click",cleanFixedDuplicates);
 document.getElementById("delete-all-fixed-btn").addEventListener("click",deleteAllFixedExpenses);
-["modal-edit","modal-card","modal-goal","modal-fix-val","modal-replicate"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
-document.getElementById("export-sync-btn").addEventListener("click", function(){
-try {
-var json = JSON.stringify(D, null, 2);
-var blob = new Blob([json], {type:'text/plain'});
-var url = URL.createObjectURL(blob);
-var a = document.createElement('a');a.href = url;a.download = 'financas-sync.txt';
-document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-toast('Backup baixado! Envie pelo WhatsApp para voce mesmo.','ok');}catch(e) {toast('Erro ao exportar: ' + e.message, 'err');
-}});
-document.getElementById("import-sync-drop").addEventListener("click", function(){
-document.getElementById("import-sync-file").click();});
-document.getElementById("import-sync-file").addEventListener("change", function(e){
-var file = e.target.files[0]; if(!file) return;
-var r = new FileReader();r.onload = function(ev){
-try {
-var imp = JSON.parse(ev.target.result);
-var txs = imp.txs || imp.transactions || (Array.isArray(imp)?imp:[]);
-var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
-var newOnes = txs.filter(function(t){ return !existingIds[t.id]; });D.txs = D.txs.concat(newOnes);
-if(imp.cards) imp.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
-if(imp.goals) imp.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
-save(); renderHome();toast(newOnes.length + ' lancamentos importados!','ok');}catch(e){ toast('Erro ao importar.','err'); }
-};r.readAsText(file,'UTF-8');});
-function populateCatSelects(){
-var cats = Object.keys(CATS).filter(function(c){ return c!=="Ganho"&&c!=="Parcela"; });
-var allCats = Object.keys(CATS);["ed-cat","goal-cat"].forEach(function(id){
-var sel = document.getElementById(id);
-if(!sel) return;
-var cur = sel.value;
-sel.innerHTML = (id==="ed-cat"?allCats:cats).map(function(c){ return '<option>'+c+'</option>'; }).join('');
-if(cur) sel.value = cur;});}
-function renderCustomCats(){
-var list = document.getElementById("custom-cats-list");
-if(!list) return;
-var custom = D.customCats||{};
-var customKeys = Object.keys(custom);list.innerHTML = '';
-if(!customKeys.length){
-var empty = document.createElement('div');empty.style.cssText = 'font-size:11px;color:var(--dim)';
-empty.textContent = 'Nenhuma categoria personalizada.';list.appendChild(empty);return;
-}customKeys.forEach(function(name){
-var wrap = document.createElement('div');
-wrap.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;';
-var ico = document.createElement('span');ico.textContent = custom[name].icon;
-var lbl = document.createElement('span');lbl.style.cssText = 'font-size:12px;flex:1;';
-lbl.textContent = name;
-var btn = document.createElement('button');
-btn.style.cssText = 'background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;';
-btn.textContent = 'X';
-(function(n){ btn.addEventListener('click', function(){ removeCustomCat(n); }); })(name);
-wrap.appendChild(ico); wrap.appendChild(lbl); wrap.appendChild(btn);list.appendChild(wrap);
-});}
-function removeCustomCat(name){delete D.customCats[name];refreshCats(); save(); renderCustomCats(); populateCatSelects();
-toast('Categoria removida.','ok');}
-var addCatBtn = document.getElementById("add-cat-btn");
-if(addCatBtn) addCatBtn.addEventListener("click", function(){
-var icon = document.getElementById("new-cat-icon").value.trim()||"📌";
-var name = document.getElementById("new-cat-name").value.trim();
-if(!name){ toast('Digite o nome da categoria.','err'); return; }
-if(!D.customCats) D.customCats={};D.customCats[name] = {icon:icon, color:"#6b6b85", bg:"rgba(107,107,133,0.1)"};
-refreshCats(); save(); renderCustomCats(); populateCatSelects();document.getElementById("new-cat-icon").value='';
-document.getElementById("new-cat-name").value='';toast('Categoria adicionada!','ok');
-});updateSyncUI();populateCatSelects();renderCustomCats();addMonth(0);renderHome();
-goPage("home");</script></body></html>
+["modal-edit","modal-card","modal-goal","modal-fix-val","modal-replicate"].f
