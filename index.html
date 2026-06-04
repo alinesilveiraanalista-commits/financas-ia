@@ -549,8 +549,95 @@ grid.appendChild(card);});}
 function autoResize(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,96)+"px";}
 function sendChat(){var inp=document.getElementById("chat-inp"),text=inp.value.trim();if(!text)return;addMsg(text,"u");inp.value="";inp.style.height="auto";var tid=addTyping();callAI(text).then(function(r){removeTyping(tid);processResult(r);}).catch(function(){removeTyping(tid);addMsg("Erro ao processar. Verifique sua conexao.","a");});}
 function callAI(text){return parseLocal(text);}
-function processResult(result){var txs=result.transactions||[];txs.forEach(function(tx){if(tx.isInstallment&&tx.installmentOf>1){var base=parseDateBR(tx.date);for(var i=0;i<tx.installmentOf;i++){var dd=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());D.txs.push({id:Date.now()+Math.random(),description:tx.description+" ("+(i+1)+"/"+tx.installmentOf+")",amount:tx.amount,type:"expense",isFixed:false,isInstallment:true,installmentOf:tx.installmentOf,installmentCurrent:i+1,category:tx.category||"Outros",date:String(dd.getDate()).padStart(2,"0")+"/"+String(dd.getMonth()+1).padStart(2,"0")+"/"+dd.getFullYear(),paymentMethod:tx.paymentMethod||"",fixedDay:null});}}
-else{D.txs.push({id:Date.now()+Math.random(),description:tx.description,amount:tx.amount,type:tx.type||"expense",isFixed:!!tx.isFixed,fixedDay:tx.fixedDay||null,isInstallment:false,installmentOf:1,installmentCurrent:1,category:tx.category||"Outros",date:tx.date,paymentMethod:tx.paymentMethod||""});}});save();var msgs=document.getElementById("chat-msgs");var w=msgs.querySelector(".wel");if(w)w.remove();var div=document.createElement("div");div.className="msg a";var lbl=document.createElement("div");lbl.className="ailbl";lbl.textContent="financa.ia";var sum=document.createElement("div");sum.textContent=result.summary;sum.style.marginBottom="7px";div.appendChild(lbl);div.appendChild(sum);var pw=document.createElement("div");pw.style.cssText="display:flex;flex-wrap:wrap;gap:3px;";txs.forEach(function(tx){var c=CATS[tx.category]||CATS.Outros,inc=tx.type==="income";var p=document.createElement("span");p.className="pill "+(inc?"cr":"db");p.textContent=c.icon+" "+tx.description+" "+(inc?"+":"-")+fmt(tx.amount)+(tx.isFixed?" [F]":"")+(tx.isInstallment?" "+tx.installmentOf+"x":"");pw.appendChild(p);});div.appendChild(pw);msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;if(sheetsUrl)syncSheets();}
+function parseLocal(text){
+return new Promise(function(resolve){
+var t=text.toLowerCase();
+var isFixed=/fixo|todo dia|todo mes|recorrente|mensalidade/i.test(t);
+var fixedDayMatch=text.match(/dia\s+(\d{1,2})/i);
+var fixedDay=fixedDayMatch?parseInt(fixedDayMatch[1]):null;
+var instMatch=text.match(/(\d+)\s*x|em\s+(\d+)\s*(vezes|parcelas)/i);
+var installmentOf=instMatch?parseInt(instMatch[1]||instMatch[2]):1;
+var isInstallment=installmentOf>1;
+var amtMatch=text.match(/r\$\s*([\d.,]+)|(?:^|\s)(\d+(?:[.,]\d+)?)\s*(?:reais)?/i);
+var amount=0;
+if(amtMatch){var raw=(amtMatch[1]||amtMatch[2]||"").replace(/\./g,"").replace(",",".");amount=parseFloat(raw)||0;}
+if(isInstallment&&installmentOf>1)amount=amount/installmentOf;
+var dateMatch=text.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+var today=new Date();
+var day=dateMatch?parseInt(dateMatch[1]):today.getDate();
+var month=dateMatch?parseInt(dateMatch[2])-1:today.getMonth();
+var year=dateMatch&&dateMatch[3]?parseInt(dateMatch[3]):today.getFullYear();
+if(year<100)year+=2000;
+var txType="expense";
+if(/salario|salário|recebi|ganho|ganhou|renda|pagamento recebido|entrada|freelance/i.test(t))txType="income";
+var category="Outros";
+if(/mercado|supermercado|hortifruti|atacado|feira/i.test(t))category="Mercado";
+else if(/restaurante|lanchonete|hamburger|pizza|sushi|ifood|delivery|comida|almoco|jantar|cafe|mcdonalds|burger/i.test(t))category="Restaurante";
+else if(/aluguel|condominio|luz|energia|agua|gas|financiamento|iptu|reforma|manutencao/i.test(t))category="Casa";
+else if(/medico|hospital|farmacia|remedio|consulta|exame|convenio|dentista|academia|gym|totalpass/i.test(t))category="Saude e Fitness";
+else if(/netflix|spotify|amazon|disney|youtube|streaming|internet|tim|claro|vivo|plano|assinatura/i.test(t))category="Assinaturas e Planos";
+else if(/uber|99|taxi|onibus|metro|combustivel|gasolina|estacionamento|pedagio/i.test(t))category="Transporte";
+else if(/carro|auto|seguro|ipva|revisao|mecanico|pneu/i.test(t))category="Carro";
+else if(/viagem|hotel|passagem|aeroporto|hospedagem|airbnb/i.test(t))category="Viagens";
+else if(/escola|curso|faculdade|livro|material|educacao/i.test(t))category="Estudos";
+else if(/salao|cabelo|manicure|depilacao|estetica|beleza/i.test(t))category="Auto-cuidado";
+else if(/pet|veterinario|racao|cobasi|cachorro|gato/i.test(t))category="Pet";
+else if(/investimento|poupanca|cdb|tesouro|previdencia/i.test(t))category="Investimentos";
+else if(/shopping|roupa|calcado|eletronico|compra/i.test(t))category="Shopping e Compras";
+else if(/presente|gift|aniversario|festa|evento|show|cinema/i.test(t))category="Festas e Eventos";
+else if(/contadora|contador|simples|das|imposto|nota fiscal/i.test(t))category="Empresa";
+if(txType==="income")category="Ganho";
+var payMethod="outros";
+if(/bradesco/i.test(t))payMethod="credit";
+else if(/nubank|nu\b/i.test(t))payMethod="pix";
+else if(/pix/i.test(t))payMethod="pix";
+else if(/debito|debito automatico/i.test(t))payMethod="debit";
+else if(/credito|credit/i.test(t))payMethod="credit";
+else if(/dinheiro|cash/i.test(t))payMethod="cash";
+else if(/boleto/i.test(t))payMethod="boleto";
+var descWords=text.replace(/r\$[\d.,]+/gi,"").replace(/\d+x\b/gi,"").replace(/fixo|todo dia \d+|todo mes|recorrente|mensalidade/gi,"").replace(/bradesco|nubank|pix|debito|credito|dinheiro|boleto|vivo|tim|claro/gi,"").replace(/em \d+ (vezes|parcelas)/gi,"").replace(/\d{1,2}\/\d{1,2}(\/\d+)?/g,"").replace(/\s+/g," ").trim();
+var description=descWords.slice(0,50)||"Lançamento";
+description=description.charAt(0).toUpperCase()+description.slice(1);
+var mm=String(month+1).padStart(2,"0");
+var dd=String(day).padStart(2,"0");
+var dateStr=dd+"/"+mm+"/"+year;
+var transactions=[];
+if(isInstallment&&installmentOf>1){
+for(var i=0;i<installmentOf;i++){
+var d=new Date(year,month+i,day);
+var dm=String(d.getMonth()+1).padStart(2,"0");
+var dy=String(d.getFullYear());
+transactions.push({description:description+" ("+(i+1)+"/"+installmentOf+")",amount:amount,type:txType,date:String(day).padStart(2,"0")+"/"+dm+"/"+dy,isFixed:false,isInstallment:true,installmentTotal:installmentOf,installmentNum:i+1,category:category,paymentMethod:payMethod});
+}
+}else{
+transactions.push({description:description,amount:amount,type:txType,date:dateStr,isFixed:isFixed,isInstallment:false,category:category,paymentMethod:payMethod,fixedDay:fixedDay});
+}
+var summary=txType==="income"?"Ganho de "+fmt(amount)+" registrado!":(isFixed?"Gasto fixo de "+fmt(amount)+" registrado!":(isInstallment?installmentOf+"x de "+fmt(amount)+" registrado!":"Gasto de "+fmt(amount)+" registrado!"));
+resolve({transactions:transactions,summary:summary,category:category,paymentMethod:payMethod});
+});
+}
+function processResult(result){
+var txs=result.transactions||[];
+if(!txs.length){addMsg("Nao entendi. Tente: 'Gastei R$50 no mercado'","a");return;}
+txs.forEach(function(tx){
+D.txs.push({
+id:Date.now()+Math.random(),
+description:tx.description,
+amount:tx.amount,
+type:tx.type||"expense",
+isFixed:tx.isFixed||false,
+isInstallment:tx.isInstallment||false,
+installmentOf:tx.installmentTotal||1,
+installmentCurrent:tx.installmentNum||1,
+category:tx.category||"Outros",
+date:tx.date,
+paymentMethod:tx.paymentMethod||"",
+fixedDay:tx.fixedDay||null
+});
+});
+save();renderHome();renderTx();
+addMsg(result.summary||"Registrado!","a");
+}
 function parseDateBR(str){var p=(str||"").split("/");if(p.length===3)return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return new Date();}
 function addMsg(content,role){var msgs=document.getElementById("chat-msgs");var w=msgs.querySelector(".wel");if(w)w.remove();var div=document.createElement("div");div.className="msg "+role;div.textContent=content;msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;}
 function addTyping(){var msgs=document.getElementById("chat-msgs");var div=document.createElement("div");div.className="msg a";div.id="typing-"+Date.now();var lbl=document.createElement("div");lbl.className="ailbl";lbl.textContent="financa.ia";var t=document.createElement("div");t.className="typing";for(var i=0;i<3;i++)t.appendChild(document.createElement("span"));div.appendChild(lbl);div.appendChild(t);msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;return div.id;}
