@@ -822,37 +822,29 @@ document.getElementById("json-file").addEventListener("change",function(e){if(e.
 document.getElementById("clear-btn").addEventListener("click",clearAll);
 document.getElementById("clean-dups-btn").addEventListener("click",cleanDuplicates);
 document.getElementById("restore-fixed-btn").addEventListener("click",function(){
-if(!window.confirm("Isso vai DELETAR todos os fixos atuais e restaurar os seus de Jan-Jun 2026.\nContinuar?"))return;
+if(!window.confirm("Vai deletar todos os fixos atuais e criar 1 de cada em Janeiro 2026.\nDepois use Replicar Ano para copiar para os outros meses.\nContinuar?"))return;
 D.txs=D.txs.filter(function(t){return!(t.isFixed&&t.type==="expense");});
 var fixos=[
-{desc:"Financiamento Caixa",cat:"Casa",dia:"01",valores:{1:1291.78,2:1291.78,3:1289.78,4:1288.23,5:1287.48,6:1286.94}},
+{desc:"Financiamento Caixa",cat:"Casa",dia:"01",valor:1291.78},
 {desc:"Netflix",cat:"Assinaturas e Planos",dia:"01",valor:44.90},
-{desc:"Conta de Luz",cat:"Casa",dia:"05",valores:{1:69.26,2:82.29,3:61.85,4:66.50,5:68.74,6:68.74}},
+{desc:"Conta de Luz",cat:"Casa",dia:"05",valor:69.26},
 {desc:"Seguro Carro Bradesco",cat:"Carro",dia:"08",valor:345.85},
-{desc:"Condominio e Boletos",cat:"Casa",dia:"15",valores:{1:615.74,2:716.53,3:733.39,4:720.84,5:734.41,6:780.27}},
+{desc:"Condominio e Boletos",cat:"Casa",dia:"15",valor:615.74},
 {desc:"Assinatura Magia Divina",cat:"Assinaturas e Planos",dia:"16",valor:80.00},
 {desc:"Internet Bradesco",cat:"Assinaturas e Planos",dia:"17",valor:109.71},
 {desc:"Plano Vivo",cat:"Assinaturas e Planos",dia:"18",valor:48.00},
 {desc:"Convenio Pets",cat:"Pet",dia:"18",valor:75.66},
-{desc:"Simples Nacional DAS 2026",cat:"Empresa",dia:"20",valores:{1:428.09,2:436.01,3:437.26,4:422.39,5:469.82,6:469.82}},
+{desc:"Simples Nacional DAS 2026",cat:"Empresa",dia:"20",valor:428.09},
 {desc:"Convenio Medico Nubank",cat:"Saude e Fitness",dia:"22",valor:369.14},
 {desc:"Totalpass Bradesco",cat:"Saude e Fitness",dia:"26",valor:89.00},
 {desc:"Clube Libelo Bradesco",cat:"Assinaturas e Planos",dia:"28",valor:87.90},
 {desc:"Contadora Nubank",cat:"Empresa",dia:"30",valor:250.00}
 ];
-var count=0;
-[1,2,3,4,5,6].forEach(function(mes){
-  var ano=2026;
-  var mm=String(mes).padStart(2,"0");
-  fixos.forEach(function(f){
-    var valor=f.valor||(f.valores&&f.valores[mes])||(f.valores&&f.valores[mes-1])||(f.valores&&f.valores[1])||0;
-    if(!valor)return;
-    D.txs.push({id:"fx_"+f.desc.replace(/\s/g,"_")+"_"+mm+"_"+ano+"_"+Math.random().toString(36).slice(2,5),description:f.desc,amount:valor,type:"expense",date:f.dia+"/"+mm+"/"+ano,isFixed:true,isInstallment:false,category:f.cat});
-    count++;
-  });
+fixos.forEach(function(f){
+D.txs.push({id:"fx_"+f.desc.replace(/\s/g,"_")+"_"+Math.random().toString(36).slice(2,6),description:f.desc,amount:f.valor,type:"expense",date:f.dia+"/01/2026",isFixed:true,isInstallment:false,category:f.cat});
 });
 save();renderHome();renderCal();
-toast("✅ "+count+" fixos restaurados!","ok");
+toast("✅ "+fixos.length+" fixos criados em Jan 2026! Agora use Replicar Ano.","ok");
 });
 document.getElementById("clean-fixed-dups-btn").addEventListener("click",cleanFixedDuplicates);
 document.getElementById("delete-all-fixed-btn").addEventListener("click",deleteAllFixedExpenses);
