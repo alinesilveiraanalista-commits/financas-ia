@@ -77,110 +77,83 @@ textarea::placeholder{color:var(--dim);}
 .calev{font-size:8px;padding:1px 3px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,209,102,0.1);color:var(--yellow);border-left:2px solid var(--yellow);}
 .calev.due{background:rgba(255,77,109,0.1);color:var(--red);border-left-color:var(--red);}
 .fixlist{display:flex;flex-direction:column;gap:5px;margin-top:14px;}
-.fixitem{display:flex;align-items:center;gap:9px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;}
-.fixday{width:34px;height:34px;border-radius:7px;background:rgba(255,209,102,0.1);border:1px solid rgba(255,209,102,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
-.fixdn{font-family:"Syne",sans-serif;font-size:13px;font-weight:800;color:var(--yellow);line-height:1;}
-.fixdl{font-size:7px;color:var(--muted);text-transform:uppercase;}.fixitem.due{border-color:rgba(255,77,109,0.4);}
-.duebdg{font-size:9px;padding:2px 6px;background:rgba(255,77,109,0.15);color:var(--red);border-radius:4px;border:1px solid rgba(255,77,109,0.3);}
-.cwpg{padding:14px;}
-.cardvis{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:8px;}
-.cardnm{font-family:"Syne",sans-serif;font-size:15px;font-weight:800;margin-bottom:2px;}
-.cardtp{font-size:10px;color:var(--muted);}
-.cardtot{font-family:"Syne",sans-serif;font-size:18px;font-weight:700;color:var(--red);margin-top:10px;}
-.cardtl{font-size:10px;color:var(--muted);}
-.addcard{background:var(--s1);border:2px dashed var(--border);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:8px;}
-.glist{display:flex;flex-direction:column;gap:7px;}
-.gcard{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
-< truncated lines 94-918 >
-D.txs=D.txs.filter(function(t){return!(t.isFixed&&t.type==="expense");});
-var fixos=[
-{desc:"Financiamento Caixa",cat:"Casa",dia:"01",valor:1291.78},
-{desc:"Netflix",cat:"Assinaturas e Planos",dia:"01",valor:44.90},
-{desc:"Conta de Luz",cat:"Casa",dia:"05",valor:69.26},
-{desc:"Seguro Carro Bradesco",cat:"Carro",dia:"08",valor:345.85},
-{desc:"Condominio e Boletos",cat:"Casa",dia:"15",valor:615.74},
-{desc:"Assinatura Magia Divina",cat:"Assinaturas e Planos",dia:"16",valor:80.00},
-{desc:"Internet Bradesco",cat:"Assinaturas e Planos",dia:"17",valor:109.71},
-{desc:"Plano Vivo",cat:"Assinaturas e Planos",dia:"18",valor:48.00},
-{desc:"Convenio Pets",cat:"Pet",dia:"18",valor:75.66},
-{desc:"Simples Nacional DAS 2026",cat:"Empresa",dia:"20",valor:428.09},
-{desc:"Convenio Medico Nubank",cat:"Saude e Fitness",dia:"22",valor:369.14},
-{desc:"Totalpass Bradesco",cat:"Saude e Fitness",dia:"26",valor:89.00},
-{desc:"Clube Libelo Bradesco",cat:"Assinaturas e Planos",dia:"28",valor:87.90},
-{desc:"Contadora Nubank",cat:"Empresa",dia:"30",valor:250.00}
-];
-for(var mes=1;mes<=12;mes++){
-  var mm=String(mes).padStart(2,"0");
-  fixos.forEach(function(f){
-    D.txs.push({id:"fx_"+f.desc.replace(/\s/g,"_")+"_"+mm+"_2026_"+Math.random().toString(36).slice(2,5),description:f.desc,amount:f.valor,type:"expense",date:f.dia+"/"+mm+"/2026",isFixed:true,isInstallment:false,category:f.cat});
-  });
-}
-save();renderHome();renderCal();
-toast("✅ "+(fixos.length*12)+" fixos criados para Jan-Dez 2026! Edite valores no Calendário.","ok");
+< truncated lines 80-426 >
+document.getElementById("savings-rate").textContent=savingsRate+"%";
+var mm=String(curM+1).padStart(2,"0"),yr=String(curY);
+var curTxs=D.txs.filter(function(t){var p=(t.date||"").split("/");return p.length>=3&&p[1]===mm&&String(parseInt(p[2]))===yr;});
+var curIncome=curTxs.filter(function(t){return t.type==="income";}).reduce(function(s,t){return s+t.amount;},0);
+var curExpense=curTxs.filter(function(t){return t.type==="expense";}).reduce(function(s,t){return s+t.amount;},0);
+var curBalance=curIncome-curExpense;
+var daysInMonth=new Date(curY,curM+1,0).getDate();
+var isCurrentMonth=(curM===today.getMonth()&&curY===today.getFullYear());
+var daysPassed=isCurrentMonth?Math.max(today.getDate(),1):daysInMonth;
+var daysRemaining=isCurrentMonth?daysInMonth-today.getDate():0;
+var historicVarExpenses=[];
+for(var hi=1;hi<=3;hi++){
+var hm=curM-hi; var hy=curY;
+if(hm<0){hm+=12;hy--;}
+var hmm=String(hm+1).padStart(2,"0"),hyr=String(hy);
+var htxs=D.txs.filter(function(t){var p=(t.date||"").split("/");return p.length>=3&&p[1]===hmm&&String(parseInt(p[2]))===hyr;});
+var hvar=htxs.filter(function(t){return t.type==="expense"&&!t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+if(hvar>0) historicVarExpenses.push(hvar);}
+var avgMonthlyVar=historicVarExpenses.length>0?historicVarExpenses.reduce(function(s,v){return s+v;},0)/historicVarExpenses.length:0;
+var avgDailyExpense=avgMonthlyVar>0?avgMonthlyVar/daysInMonth:0;
+var varLancado=curTxs.filter(function(t){return t.type==="expense"&&!t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+var fixLancado=curTxs.filter(function(t){return t.type==="expense"&&t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+var varRestante=Math.max(avgDailyExpense*daysRemaining - varLancado, 0);
+var projectedExpense=fixLancado+varLancado+varRestante;
+var projectedBalance=curIncome-projectedExpense;
+var projDiv=document.getElementById("projection-section");
+projDiv.innerHTML='<div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Saldo atual do mês</div><div style="font-family:\'Syne\',sans-serif;font-size:20px;font-weight:700;color:'+(curBalance<0?"var(--red)":"var(--green)")+';">'+fmt(curBalance)+'</div></div><div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Dias restantes: '+daysRemaining+'</div><div style="font-size:11px;color:var(--muted);">Gasto médio/dia: '+fmt(avgDailyExpense)+'</div></div><div style="background:var(--s3);border:1px solid var(--border);border-radius:var(--rs);padding:10px;"><div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Projeção até '+daysInMonth+' de '+MONTHS[curM]+'</div><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:700;color:'+(projectedBalance<0?"var(--red)":"var(--green)")+';">'+fmt(projectedBalance)+'</div><div style="font-size:10px;color:var(--muted);margin-top:4px;">'+(projectedBalance<0?"⚠️ ATENÇÃO: Você vai ficar no vermelho!":"✅ Você vai fechar positivo!")+'</div></div>';
+var catExpense={};curTxs.filter(function(t){return t.type==="expense";}).forEach(function(t){
+if(!catExpense[t.category])catExpense[t.category]=0;catExpense[t.category]+=t.amount;
 });
-document.getElementById("clean-fixed-dups-btn").addEventListener("click",cleanFixedDuplicates);
-document.getElementById("delete-all-fixed-btn").addEventListener("click",deleteAllFixedExpenses);
-["modal-edit","modal-card","modal-goal","modal-fix-val","modal-replicate"].forEach(function(id){document.getElementById(id).addEventListener("click",function(e){if(e.target===this)this.classList.remove("on");});});
-document.getElementById("export-sync-btn").addEventListener("click", function(){
-try {
-var json = JSON.stringify(D, null, 2);
-var blob = new Blob([json], {type:'text/plain'});
-var url = URL.createObjectURL(blob);
-var a = document.createElement('a');a.href = url;a.download = 'financas-sync.txt';
-document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-toast('Backup baixado! Envie pelo WhatsApp para voce mesmo.','ok');}catch(e) {toast('Erro ao exportar: ' + e.message, 'err');
+var breakdown=document.getElementById("expense-breakdown");breakdown.innerHTML="";
+Object.keys(catExpense).sort(function(a,b){return catExpense[b]-catExpense[a];}).forEach(function(cat){
+var amt=catExpense[cat];
+var pct=avgExpense>0?Math.round(amt/avgExpense*100):0;
+var bar=document.createElement("div");
+bar.style.cssText="background:var(--s3);border:1px solid var(--border);border-radius:var(--rs);padding:10px;";
+var color=CATS[cat]&&CATS[cat].bg?CATS[cat].bg:"#666";
+bar.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;font-weight:500;">'+cat+'</span><span style="font-size:12px;color:var(--muted);">'+fmt(amt)+' ('+pct+'%)</span></div><div style="height:4px;background:var(--s2);border-radius:2px;overflow:hidden;"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+color+';"></div></div>';
+breakdown.appendChild(bar);});
+var alerts=document.getElementById("alerts-list");alerts.innerHTML="";
+var alertMessages=[];
+if(projectedBalance<0)alertMessages.push({type:"danger",text:"🚨 CRÍTICO: Você vai fechar -"+fmt(Math.abs(projectedBalance))+" no mês!"});
+if(curExpense>avgExpense*1.2)alertMessages.push({type:"danger",text:"⚠️ Gastos "+Math.round(((curExpense/avgExpense)-1)*100)+"% acima da média!"});
+if(catExpense["Outros"]&&catExpense["Outros"]>500)alertMessages.push({type:"warning",text:"⚠️ 'Outros' muito alto: "+fmt(catExpense["Outros"])+" (veja subcategorias!)"});
+D.goals.forEach(function(g){
+var spent=catExpense[g.category]||0;
+if(spent>g.limit){
+var over=Math.round(((spent/g.limit)-1)*100);
+alertMessages.push({type:"danger",text:"🚨 "+g.category+" ESTOUROU! R$"+spent.toFixed(0)+" / R$"+g.limit.toFixed(0)+" (+"+over+"%)"});
+}else if(spent>g.limit*0.8){
+alertMessages.push({type:"warning",text:"⚠️ "+g.category+" em "+Math.round(spent/g.limit*100)+"% da meta"});
 }});
-document.getElementById("import-sync-drop").addEventListener("click", function(){
-document.getElementById("import-sync-file").click();});
-document.getElementById("import-sync-file").addEventListener("change", function(e){
-var file = e.target.files[0]; if(!file) return;
-var r = new FileReader();r.onload = function(ev){
-try {
-var imp = JSON.parse(ev.target.result);
-var txs = imp.txs || imp.transactions || (Array.isArray(imp)?imp:[]);
-var existingIds = {}; D.txs.forEach(function(t){ existingIds[t.id]=true; });
-var newOnes = txs.filter(function(t){ return !existingIds[t.id]; });D.txs = D.txs.concat(newOnes);
-if(imp.cards) imp.cards.forEach(function(c){ if(!D.cards.find(function(x){return x.id===c.id;})) D.cards.push(c); });
-if(imp.goals) imp.goals.forEach(function(g){ if(!D.goals.find(function(x){return x.category===g.category;})) D.goals.push(g); });
-save(); renderHome();toast(newOnes.length + ' lancamentos importados!','ok');}catch(e){ toast('Erro ao importar.','err'); }
-};r.readAsText(file,'UTF-8');});
-function populateCatSelects(){
-var cats = Object.keys(CATS).filter(function(c){ return c!=="Ganho"&&c!=="Parcela"; });
-var allCats = Object.keys(CATS);["ed-cat","goal-cat"].forEach(function(id){
-var sel = document.getElementById(id);
-if(!sel) return;
-var cur = sel.value;
-sel.innerHTML = (id==="ed-cat"?allCats:cats).map(function(c){ return '<option>'+c+'</option>'; }).join('');
-if(cur) sel.value = cur;});}
-function renderCustomCats(){
-var list = document.getElementById("custom-cats-list");
-if(!list) return;
-var custom = D.customCats||{};
-var customKeys = Object.keys(custom);list.innerHTML = '';
-if(!customKeys.length){
-var empty = document.createElement('div');empty.style.cssText = 'font-size:11px;color:var(--dim)';
-empty.textContent = 'Nenhuma categoria personalizada.';list.appendChild(empty);return;
-}customKeys.forEach(function(name){
-var wrap = document.createElement('div');
-wrap.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;';
-var ico = document.createElement('span');ico.textContent = custom[name].icon;
-var lbl = document.createElement('span');lbl.style.cssText = 'font-size:12px;flex:1;';
-lbl.textContent = name;
-var btn = document.createElement('button');
-btn.style.cssText = 'background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;';
-btn.textContent = 'X';
-(function(n){ btn.addEventListener('click', function(){ removeCustomCat(n); }); })(name);
-wrap.appendChild(ico); wrap.appendChild(lbl); wrap.appendChild(btn);list.appendChild(wrap);
-});}
-function removeCustomCat(name){delete D.customCats[name];refreshCats(); save(); renderCustomCats(); populateCatSelects();
-toast('Categoria removida.','ok');}
-var addCatBtn = document.getElementById("add-cat-btn");
-if(addCatBtn) addCatBtn.addEventListener("click", function(){
-var icon = document.getElementById("new-cat-icon").value.trim()||"📌";
-var name = document.getElementById("new-cat-name").value.trim();
-if(!name){ toast('Digite o nome da categoria.','err'); return; }
-if(!D.customCats) D.customCats={};D.customCats[name] = {icon:icon, color:"#6b6b85", bg:"rgba(107,107,133,0.1)"};
-refreshCats(); save(); renderCustomCats(); populateCatSelects();document.getElementById("new-cat-icon").value='';
-document.getElementById("new-cat-name").value='';toast('Categoria adicionada!','ok');
-});updateSyncUI();populateCatSelects();renderCustomCats();addMonth(0);renderHome();
-goPage("home");</script></body></html>
+if(!alertMessages.length)alertMessages.push({type:"success",text:"✅ Sem alertas. Tudo sob controle!"});
+alertMessages.forEach(function(a){
+var el=document.createElement("div");
+el.style.cssText="background:var(--s3);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:12px;color:var(--muted);";
+el.textContent=a.text;alerts.appendChild(el);});
+var recs=document.getElementById("recommendations-list");recs.innerHTML="";
+var recommendations=[];
+var historyDiv=document.getElementById("history-table");
+var last12=[];
+for(var i=11;i>=0;i--){
+var m=curM-i;
+var y=curY;
+if(m<0){m+=12;y--;}
+var mm=String(m+1).padStart(2,"0"),yr=String(y);
+var txs=D.txs.filter(function(t){var p=(t.date||"").split("/");return p.length>=3&&p[1]===mm&&String(parseInt(p[2]))===yr;});
+var inc=txs.filter(function(t){return t.type==="income";}).reduce(function(s,t){return s+t.amount;},0);
+var exp=txs.filter(function(t){return t.type==="expense";}).reduce(function(s,t){return s+t.amount;},0);
+last12.push({month:MONTHS[m].slice(0,3),year:y,income:inc,expense:exp,balance:inc-exp});
+}
+var table='<table style="width:100%;border-collapse:collapse;"><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px;font-weight:500;">Mês</th><th style="text-align:right;padding:6px;color:var(--green);font-weight:500;">Ganho</th><th style="text-align:right;padding:6px;color:var(--red);font-weight:500;">Gasto</th><th style="text-align:right;padding:6px;color:var(--muted);font-weight:500;">Saldo</th></tr>';
+last12.forEach(function(m){
+var balColor=m.balance<0?"var(--red)":"var(--green)";
+table+='<tr style="border-bottom:1px solid var(--s3);"><td style="padding:6px;"><strong>'+m.month+' '+m.year.toString().slice(2)+'</strong></td><td style="text-align:right;padding:6px;color:var(--green);">'+fmt(m.income)+'</td><td style="text-align:right;padding:6px;color:var(--red);">'+fmt(m.expense)+'</td><td style="text-align:right;padding:6px;font-weight:600;color:'+balColor+';">'+fmt(m.balance)+'</td></tr>';
+});table+='</table>';historyDiv.innerHTML=table;
+var pieDiv=document.getElementById("pie-chart-section");
+var fixTotal=curTxs.filter(function(t){return t.type==="expense"&&t.isFixed;}).reduce(function(s,t){return s+t.amount;},0);
+var varTotal=curTxs.filter(function(t){return t.type==="expense"&&!t.isFixed&&!t.isInstallment;}).reduce(function(s,t){return s+t.amount;},0);
